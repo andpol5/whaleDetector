@@ -2,6 +2,13 @@ import numpy as np
 import cv2 as cv
 from matplotlib import pyplot as plt
 
+def getAllImageFiles()
+    for root, dirnames, filenames in os.walk(source):
+        filenames = [ f for f in filenames if os.path.splitext(f)[1] in ('.mov', '.MOV', '.avi', '.mpg') ]
+        for filename in filenames:
+            matches.append(os.path.join(root, filename))
+    return matches
+
 while True:
     image = cv.imread('w_90.jpg')
 
@@ -11,17 +18,17 @@ while True:
     # Calculate most occurring values in each channel, then use these
     # colors as filler for white areas in the original image. White pixels
     # are pixels with a value higher than TH.
-    histR = cv.calcHist([image], [2], None, [256], [0,256])  
+    histR = cv.calcHist([image], [2], None, [256], [0,256])
     histG = cv.calcHist([image], [1], None, [256], [0,256])
     histB = cv.calcHist([image], [0], None, [256], [0,256])
 
-    # Get the index numbers of the peaks of each histogram       
-    indexOfMaxR = np.argmax(histR) 
+    # Get the index numbers of the peaks of each histogram
+    indexOfMaxR = np.argmax(histR)
     indexOfMaxG = np.argmax(histG)
-    indexOfMaxB = np.argmax(histB) 
+    indexOfMaxB = np.argmax(histB)
 
     # Threshold for whiteness in the gray image
-    WHITE_LEVEL_THRESHOLD = 175 
+    WHITE_LEVEL_THRESHOLD = 175
     imageGray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
     imageR[imageGray > WHITE_LEVEL_THRESHOLD] = indexOfMaxR
     imageG[imageGray > WHITE_LEVEL_THRESHOLD] = indexOfMaxG
@@ -51,7 +58,7 @@ while True:
     h = imageBinary.shape[0] - 2*y
     w = imageBinary.shape[1] - 2*x
     rectMask[y:y+h, x:x+w] = 255
-    # Combine the masks and invert 
+    # Combine the masks and invert
     imageBinary = cv.bitwise_and(~imageBinary, ~rectMask)
 
     # Erode and dialate to remove some of the noise
@@ -69,7 +76,7 @@ while True:
     mask = np.zeros(imageBinary.shape, np.uint8)
     cv.drawContours(imageBinary,[contour],0,(0,255,0),2)
     cv.drawContours(mask,[contour],0,255,-1)
-    
+
     # Find the bounding rectangle for the contour
     x, y, w, h = cv.boundingRect(contour)
 
@@ -79,7 +86,7 @@ while True:
 
     cv.imshow('w', croppedImage)
 
-    key = cv.waitKey(1) & 0xFF    
+    key = cv.waitKey(1) & 0xFF
     # if the 'q' key is pressed, stop the loop
     if key == ord("q"):
 	    break
