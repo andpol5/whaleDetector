@@ -183,6 +183,7 @@ for i in xrange(100):
    yTrain = yTrain.tolist()
    
    if i%5 == 0:
+      import ipdb; ipdb.set_trace()
       train_accuracy = accuracy.eval(feed_dict={ x:batch[0], y_: yTrain, keep_prob: 1.0})
       print "step %d, training accuracy %g"%(i, train_accuracy)
 
