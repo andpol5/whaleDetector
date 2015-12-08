@@ -103,8 +103,8 @@ sess = tf.InteractiveSession()
 
 # Constants 
 nClasses = 2
-imageSize = 256*256
-batchSize = 20
+imageSize = 128*128
+batchSize = 11
 
 # The size of the images is 200x150
 x = tf.placeholder("float", shape=[None, imageSize])
@@ -121,11 +121,10 @@ b_conv1 = bias_variable([32])
 # To apply the layer, we first reshape x to a 4d tensor, with the second 
 # and third dimensions corresponding to image width and height, 
 # and the final dimension corresponding to the number of color channels.
-x_image = tf.reshape(x, [-1,256,256,1])
+x_image = tf.reshape(x, [-1,128,128,1])
 
 # We then convolve x_image with the weight tensor, 
 # add the bias, apply the ReLU function, and finally max pool.
-
 h_conv1 = tf.nn.relu6(conv2d(x_image, W_conv1) + b_conv1)
 h_pool1 = max_pool_2x2(h_conv1)
 
@@ -144,10 +143,10 @@ h_pool2 = max_pool_2x2(h_conv2)
 # We reshape the tensor from the pooling layer into a batch of vectors, multiply by a weight 
 # matrix, add a bias, and apply a ReLU.
 
-W_fc1 = weight_variable([64 * 64 * 64, 1024])
+W_fc1 = weight_variable([32*32*64, 1024])
 b_fc1 = bias_variable([1024])
 
-h_pool2_flat = tf.reshape(h_pool2, [-1, 64*64*64])
+h_pool2_flat = tf.reshape(h_pool2, [-1, 32*32*64])
 h_fc1 = tf.nn.relu6(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
 
 # DROPOUT
@@ -164,27 +163,24 @@ dataset = Dataset('jack_jill_imgs', 'jackAndJill.csv')
 
 # Train and eval the model
 cross_entropy = -tf.reduce_sum(y_*tf.log(y_conv))
-train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
+train_step = tf.train.GradientDescentOptimizer(0.01).minimize(cross_entropy)
+#train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
 correct_prediction = tf.equal(tf.argmax(y_conv,1), tf.argmax(y_,1))
 accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
 sess.run(tf.initialize_all_variables())
 
-for i in xrange(100):
+for i in xrange(150):
    step_start = time.time()
    batch = dataset.get_batch(batchSize)
    labels = batch[1]
 
    # Format the Y for this step
-   # I don't know why it only recognizes 18 out of 19 images   
    yTrain = np.zeros((batchSize, nClasses))
    for j in xrange(batchSize):
-#       import ipdb; ipdb.set_trace()
       yTrain[j][ int(labels[j]) ] = 1
-
    yTrain = yTrain.tolist()
    
    if i%5 == 0:
-      # import ipdb; ipdb.set_trace()
       train_accuracy = accuracy.eval(feed_dict={ x:batch[0], y_: yTrain, keep_prob: 1.0})
       print "step %d, training accuracy %g"%(i, train_accuracy)
 
@@ -192,9 +188,9 @@ for i in xrange(100):
    print "step %d finished, time = %s" %(i, time.time() - step_start)
 
 # Evaluate the prediction
-test = dataset.get_batch(batchSize)
+test = dataset.get_batch(80)
 
-yTest = np.zeros((batchSize, nClasses))
+yTest = np.zeros((80, nClasses))
 for j in xrange(batchSize):
    yTest[j][ int(labels[j]) ] = 1
 

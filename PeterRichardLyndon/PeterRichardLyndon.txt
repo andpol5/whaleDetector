@@ -1,0 +1,24 @@
+Mini dataset of the whales:
+
+Peter (whale_36851)
+w_1752.jpg  w_350.jpg   w_5185.jpg  w_5689.jpg  w_6948.jpg  w_8990.jpg
+w_2203.jpg  w_4208.jpg  w_5469.jpg  w_5877.jpg  w_6971.jpg  w_9200.jpg
+w_2495.jpg  w_4254.jpg  w_5480.jpg  w_6329.jpg  w_7282.jpg  w_9214.jpg
+w_2866.jpg  w_4478.jpg  w_5539.jpg  w_6506.jpg  w_7319.jpg  w_9373.jpg
+w_293.jpg   w_5165.jpg  w_5662.jpg  w_691.jpg   w_8949.jpg
+
+
+Richard (whale_65586)
+w_1237.jpg  w_2797.jpg  w_438.jpg   w_540.jpg   w_7299.jpg  w_9073.jpg
+w_1997.jpg  w_3235.jpg  w_4390.jpg  w_5549.jpg  w_7382.jpg
+w_2162.jpg  w_3309.jpg  w_4507.jpg  w_6186.jpg  w_8333.jpg
+w_2211.jpg  w_3809.jpg  w_4574.jpg  w_6214.jpg  w_8354.jpg
+w_2355.jpg  w_4284.jpg  w_4892.jpg  w_7165.jpg  w_8819.jpg
+
+Lyndon (whale_90957)
+w_1196.jpg  w_249.jpg   w_3768.jpg  w_6189.jpg  w_6702.jpg  w_9339.jpg
+w_1636.jpg  w_3204.jpg  w_403.jpg   w_636.jpg   w_7090.jpg  w_9343.jpg
+w_1832.jpg  w_3296.jpg  w_4452.jpg  w_6383.jpg  w_7389.jpg  w_9402.jpg
+w_2247.jpg  w_3389.jpg  w_4592.jpg  w_6431.jpg  w_8118.jpg
+w_2419.jpg  w_3718.jpg  w_5202.jpg  w_6552.jpg  w_9058.jpg
+
