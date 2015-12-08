@@ -1,0 +1,20 @@
+Mini dataset of the whales named after Jack and jill:
+
+Jack (whale_28892)
+w_1149.jpg  w_2304.jpg  w_3137.jpg  w_5139.jpg  w_6710.jpg  w_8408.jpg
+w_1200.jpg  w_2578.jpg  w_3507.jpg  w_5271.jpg  w_7473.jpg  w_872.jpg
+w_1497.jpg  w_2616.jpg  w_4611.jpg  w_5659.jpg  w_7492.jpg  w_9379.jpg
+w_160.jpg   w_2656.jpg  w_4744.jpg  w_5765.jpg  w_7830.jpg
+w_1666.jpg  w_2736.jpg  w_4930.jpg  w_6008.jpg  w_7950.jpg
+w_1767.jpg  w_3033.jpg  w_4937.jpg  w_6690.jpg  w_815.jpg
+
+Jill (whale_95370)
+w_1275.jpg  w_2090.jpg  w_3243.jpg  w_4895.jpg  w_643.jpg   w_7910.jpg
+w_1357.jpg  w_2197.jpg  w_3355.jpg  w_4997.jpg  w_6924.jpg  w_8788.jpg
+w_1546.jpg  w_2494.jpg  w_3837.jpg  w_5350.jpg  w_7067.jpg  w_8856.jpg
+w_1563.jpg  w_2844.jpg  w_3964.jpg  w_5489.jpg  w_7112.jpg  w_8983.jpg
+w_1568.jpg  w_3051.jpg  w_4301.jpg  w_581.jpg   w_7188.jpg  w_8996.jpg
+w_1972.jpg  w_3076.jpg  w_4575.jpg  w_5839.jpg  w_7317.jpg  w_918.jpg
+w_1991.jpg  w_3085.jpg  w_4779.jpg  w_5942.jpg  w_7525.jpg  w_9295.jpg
+w_2036.jpg  w_3187.jpg  w_4866.jpg  w_6009.jpg  w_7833.jpg
+
