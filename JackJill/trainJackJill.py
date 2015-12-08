@@ -170,6 +170,7 @@ accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
 sess.run(tf.initialize_all_variables())
 
 for i in xrange(100):
+   step_start = time.time()
    batch = dataset.get_batch(batchSize)
    labels = batch[1]
 
@@ -183,21 +184,20 @@ for i in xrange(100):
    yTrain = yTrain.tolist()
    
    if i%5 == 0:
-      import ipdb; ipdb.set_trace()
+      # import ipdb; ipdb.set_trace()
       train_accuracy = accuracy.eval(feed_dict={ x:batch[0], y_: yTrain, keep_prob: 1.0})
       print "step %d, training accuracy %g"%(i, train_accuracy)
 
    train_step.run(feed_dict={x: batch[0], y_: yTrain, keep_prob: 0.5}, session=sess)
+   print "step %d finished, time = %s" %(i, time.time() - step_start)
 
 # Evaluate the prediction
 test = dataset.get_batch(batchSize)
-correct_prediction = tf.equal(tf.argmax(y,1), tf.argmax(y_,1))
-accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
 
 yTest = np.zeros((batchSize, nClasses))
 for j in xrange(batchSize):
    yTest[j][ int(labels[j]) ] = 1
 
 print "Accuracy = "
-print accuracy.eval(feed_dict={x: test[0], y_: yTest})
+print accuracy.eval(feed_dict={x: test[0], y_: yTest, keep_prob: 1.0})
 print("--- %s seconds ---" % (time.time() - start_time))
