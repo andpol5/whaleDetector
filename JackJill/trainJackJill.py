@@ -189,10 +189,11 @@ for i in xrange(150):
 
 # Evaluate the prediction
 test = dataset.get_batch(80)
+testLabels = test[1]
 
 yTest = np.zeros((80, nClasses))
-for j in xrange(batchSize):
-   yTest[j][ int(labels[j]) ] = 1
+for j in xrange(80):
+   yTest[j][ int(testLabels[j]) ] = 1
 
 print "Accuracy = "
 print accuracy.eval(feed_dict={x: test[0], y_: yTest, keep_prob: 1.0})

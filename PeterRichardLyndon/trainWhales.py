@@ -188,11 +188,11 @@ for i in xrange(1000):
    print "step %d finished, time = %s" %(i, time.time() - step_start)
 
 # Evaluate the prediction
-test = dataset.get_batch(batchSize)
-
-yTest = np.zeros((batchSize, nClasses))
-for j in xrange(batchSize):
-   yTest[j][ int(labels[j]) ] = 1
+test = dataset.get_batch(83)
+testLabels = test[1]
+yTest = np.zeros((83, nClasses))
+for j in xrange(83):
+   yTest[j][ int(testLabels[j]) ] = 1
 
 print "Accuracy = "
 print accuracy.eval(feed_dict={x: test[0], y_: yTest, keep_prob: 1.0})
