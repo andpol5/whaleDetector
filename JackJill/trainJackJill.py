@@ -126,7 +126,7 @@ x_image = tf.reshape(x, [-1,256,256,1])
 # We then convolve x_image with the weight tensor, 
 # add the bias, apply the ReLU function, and finally max pool.
 
-h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1)
+h_conv1 = tf.nn.relu6(conv2d(x_image, W_conv1) + b_conv1)
 h_pool1 = max_pool_2x2(h_conv1)
 
 # SECOND CONV LAYER
@@ -135,7 +135,7 @@ h_pool1 = max_pool_2x2(h_conv1)
 W_conv2 = weight_variable([5, 5, 32, 64])
 b_conv2 = bias_variable([64])
 
-h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)
+h_conv2 = tf.nn.relu6(conv2d(h_pool1, W_conv2) + b_conv2)
 h_pool2 = max_pool_2x2(h_conv2)
 
 # DENSELY CONNECTED LAYER
@@ -144,11 +144,11 @@ h_pool2 = max_pool_2x2(h_conv2)
 # We reshape the tensor from the pooling layer into a batch of vectors, multiply by a weight 
 # matrix, add a bias, and apply a ReLU.
 
-W_fc1 = weight_variable([7 * 7 * 64, 1024])
+W_fc1 = weight_variable([64 * 64 * 64, 1024])
 b_fc1 = bias_variable([1024])
 
-h_pool2_flat = tf.reshape(h_pool2, [-1, 7*7*64])
-h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
+h_pool2_flat = tf.reshape(h_pool2, [-1, 64*64*64])
+h_fc1 = tf.nn.relu6(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
 
 # DROPOUT
 keep_prob = tf.placeholder("float")
