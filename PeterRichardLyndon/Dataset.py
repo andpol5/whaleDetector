@@ -9,8 +9,9 @@ from PIL import Image
 from collections import defaultdict
 
 class Dataset(object):
-   def __init__(self, inputDir, labelsFile):
+   def __init__(self, inputDir, labelsFile, tfSession):
       self.inputDir = inputDir
+      self.tfSession = tfSession
       output = np.genfromtxt(labelsFile, skip_header=1, dtype=[('image', 'S10'), ('label', 'S11')], delimiter=',')
       
       labels = [x[1] for x in output]
@@ -56,6 +57,18 @@ class Dataset(object):
       randInd = random.permutation(len(self.train))[:size]
       return self.read_images([os.path.join(self.inputDir, x) for x in self.train[randInd]]), self.trainLabels[randInd]
 
+   # Return size of dataset
+   def get_size(self):
+      return self.images.shape[0]
+
+   def get_sequential_batch(self, batchSize, startIndex):
+      endIndex = startIndex + batchSize;
+      if endIndex > self.get_size()-1:
+         endIndex = -1
+      slicedPart = range(startIndex,endIndex)
+      return self.read_images([os.path.join(self.inputDir, x) for x in self.train[slicedPart]]), self.trainLabels[slicedPart]
+
+   # TODO fix the reader to not throw up enqueue errors
    def read_images(self, filenames):
       images = []
       reader = tf.WholeFileReader()
