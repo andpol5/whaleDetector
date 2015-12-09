@@ -67,12 +67,12 @@ class Dataset(object):
          jpeg_file_queue = tf.train.string_input_producer(filenames)
          jkey, jvalue = reader.read(jpeg_file_queue)
          j_img = tf.image.decode_jpeg(jvalue)
-      
+
       with tf.Session() as sess:
          # Start populating the filename queue.
          coord = tf.train.Coordinator()
          threads = tf.train.start_queue_runners(coord=coord)
-         
+
          if len(filenames) > 0:
             for i in range(len(filenames)):
                jpeg = j_img.eval()
@@ -104,7 +104,7 @@ sess = tf.InteractiveSession()
 # Constants 
 nClasses = 2
 imageSize = 128*128
-batchSize = 11
+batchSize = 50
 
 # The size of the images is 200x150
 x = tf.placeholder("float", shape=[None, imageSize])
@@ -115,8 +115,13 @@ y_ = tf.placeholder("float", shape=[None, nClasses])
 # The first two dimensions are the patch size, the next is the number of input channels, 
 # and the last is the number of output channels. 
 # We will also have a bias vector with a component for each output channel.
-W_conv1 = weight_variable([5, 5, 1, 32])
-b_conv1 = bias_variable([32])
+d1 = 32
+d2 = 32
+d3 = 64
+d4 = 64
+d5 = 300
+W_conv1 = weight_variable([5, 5, 1, d1])
+b_conv1 = bias_variable([d1])
 
 # To apply the layer, we first reshape x to a 4d tensor, with the second 
 # and third dimensions corresponding to image width and height, 
@@ -125,17 +130,32 @@ x_image = tf.reshape(x, [-1,128,128,1])
 
 # We then convolve x_image with the weight tensor, 
 # add the bias, apply the ReLU function, and finally max pool.
-h_conv1 = tf.nn.relu6(conv2d(x_image, W_conv1) + b_conv1)
+h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1)
 h_pool1 = max_pool_2x2(h_conv1)
 
 # SECOND CONV LAYER
 # In order to build a deep network, we stack several layers of this type. 
 # The second layer will have 64 features for each 5x5 patch.
-W_conv2 = weight_variable([5, 5, 32, 64])
-b_conv2 = bias_variable([64])
+W_conv2 = weight_variable([5, 5, d1, d2])
+b_conv2 = bias_variable([d2])
 
-h_conv2 = tf.nn.relu6(conv2d(h_pool1, W_conv2) + b_conv2)
+h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)
 h_pool2 = max_pool_2x2(h_conv2)
+
+# THIRD CONV LAYER
+W_conv3 = weight_variable([5, 5, d2, d3])
+b_conv3 = bias_variable([d3])
+
+h_conv3 = tf.nn.relu(conv2d(h_pool2, W_conv3) + b_conv3)
+h_pool3 = max_pool_2x2(h_conv3)
+
+# FORTH CONV LAYER
+W_conv4 = weight_variable([3, 3, d3, d4])
+b_conv4 = bias_variable([d4])
+
+h_conv4 = tf.nn.relu6(conv2d(h_pool3, W_conv4) + b_conv4)
+h_pool4 = max_pool_2x2(h_conv4)
+
 
 # DENSELY CONNECTED LAYER
 # Now that the image size has been reduced to 7x7, 
@@ -143,18 +163,18 @@ h_pool2 = max_pool_2x2(h_conv2)
 # We reshape the tensor from the pooling layer into a batch of vectors, multiply by a weight 
 # matrix, add a bias, and apply a ReLU.
 
-W_fc1 = weight_variable([32*32*64, 1024])
-b_fc1 = bias_variable([1024])
+W_fc1 = weight_variable([8*8*d4, d5])
+b_fc1 = bias_variable([d5])
 
-h_pool2_flat = tf.reshape(h_pool2, [-1, 32*32*64])
-h_fc1 = tf.nn.relu6(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
+h_pool4_flat = tf.reshape(h_pool4, [-1, 8*8*d4])
+h_fc1 = tf.nn.relu(tf.matmul(h_pool4_flat, W_fc1) + b_fc1)
 
 # DROPOUT
 keep_prob = tf.placeholder("float")
 h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
 
 # READOUT LAYER
-W_fc2 = weight_variable([1024, nClasses])
+W_fc2 = weight_variable([d5, nClasses])
 b_fc2 = bias_variable([nClasses])
 y_conv=tf.nn.softmax(tf.matmul(h_fc1_drop, W_fc2) + b_fc2)
 
@@ -162,15 +182,36 @@ y_conv=tf.nn.softmax(tf.matmul(h_fc1_drop, W_fc2) + b_fc2)
 dataset = Dataset('jack_jill_imgs', 'jackAndJill.csv')
 
 # Train and eval the model
-cross_entropy = -tf.reduce_sum(y_*tf.log(y_conv))
-train_step = tf.train.GradientDescentOptimizer(0.01).minimize(cross_entropy)
-#train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
+cross_entropy = -tf.reduce_sum(y_*tf.log(tf.clip_by_value(y_conv,1e-10,1.0)))
+
+# train_step = tf.train.GradientDescentOptimizer(0.00001).minimize(cross_entropy)
+train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
 correct_prediction = tf.equal(tf.argmax(y_conv,1), tf.argmax(y_,1))
 accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
 sess.run(tf.initialize_all_variables())
 
-for i in xrange(150):
+f1=open('log', 'w+')
+f1.write('AAAAA\n')
+f1.write("Start %s\n" % time.time())
+f1.flush()
+merged = tf.merge_all_summaries()
+writer = tf.train.SummaryWriter("/tmp/whales", sess.graph_def)
+
+for i in xrange(100):
    step_start = time.time()
+   
+   if i%10 == 0 and i!=0:
+      test = dataset.get_batch(80)
+      testLabels = test[1]
+
+      yTest = np.zeros((80, nClasses))
+      for j in xrange(80):
+         yTest[j][ int(testLabels[j]) ] = 1
+
+      f1.write("Accuracy = \n")
+      f1.write(str(accuracy.eval(feed_dict={x: test[0], y_: yTest, keep_prob: 1.0}))+'\n')
+      f1.flush()
+
    batch = dataset.get_batch(batchSize)
    labels = batch[1]
 
@@ -178,14 +219,12 @@ for i in xrange(150):
    yTrain = np.zeros((batchSize, nClasses))
    for j in xrange(batchSize):
       yTrain[j][ int(labels[j]) ] = 1
-   yTrain = yTrain.tolist()
-   
-   if i%5 == 0:
-      train_accuracy = accuracy.eval(feed_dict={ x:batch[0], y_: yTrain, keep_prob: 1.0})
-      print "step %d, training accuracy %g"%(i, train_accuracy)
-
    train_step.run(feed_dict={x: batch[0], y_: yTrain, keep_prob: 0.5}, session=sess)
-   print "step %d finished, time = %s" %(i, time.time() - step_start)
+
+   f1.write("step %d finished, time = %s\n" %(i, time.time() - step_start))
+   f1.write(str(cross_entropy.eval(feed_dict={x: batch[0], y_: yTrain, keep_prob: 1}, session=sess))+"\n")
+   f1.write(str(np.argmax(y_conv.eval(feed_dict={x: batch[0], y_: yTrain, keep_prob: 1}, session=sess), axis=1))+"\n")
+   f1.flush()
 
 # Evaluate the prediction
 test = dataset.get_batch(80)
@@ -195,6 +234,8 @@ yTest = np.zeros((80, nClasses))
 for j in xrange(80):
    yTest[j][ int(testLabels[j]) ] = 1
 
-print "Accuracy = "
-print accuracy.eval(feed_dict={x: test[0], y_: yTest, keep_prob: 1.0})
-print("--- %s seconds ---" % (time.time() - start_time))
+f1.write("Accuracy = \n")
+f1.write(str(accuracy.eval(feed_dict={x: test[0], y_: yTest, keep_prob: 1.0})))
+f1.write("\n--- %s seconds ---" % (time.time() - start_time))
+f1.flush()
+f1.close()
