@@ -12,6 +12,8 @@ from collections import defaultdict
 
 class Dataset(object):
    def __init__(self, inputDir, labelsFile):
+      self.indexInEpoch = 0
+      self.epochsCompleted = 0
       self.inputDir = inputDir
       output = np.genfromtxt(labelsFile, skip_header=1, dtype=[('image', 'S10'), ('label', 'S11')], delimiter=',')
       
@@ -57,6 +59,28 @@ class Dataset(object):
    def get_batch(self, size):
       randInd = random.permutation(len(self.train))[:size]
       return self.read_images([os.path.join(self.inputDir, x) for x in self.train[randInd]]), self.trainLabels[randInd]
+
+   # Return size of dataset
+   def get_size(self):
+      return len(self.train)
+
+   def get_sequential_batch(self, batchSize):
+      start = self.indexInEpoch
+      self.indexInEpoch += batchSize
+      if self.indexInEpoch > self.get_size():
+         # Finished epoch
+         self.epochsCompleted += 1
+         # Shuffle the data
+         perm = np.arange(self.get_size())
+         np.random.shuffle(perm)
+         self.train = self.train[perm]
+         self.trainLabels = self.trainLabels[perm]
+         # Start next epoch
+         start = 0
+         self.indexInEpoch = batchSize
+         assert batchSize <= self.get_size()
+      end = self.indexInEpoch
+      return self.read_images([os.path.join(self.inputDir, x) for x in self.train[start:end]]), self.trainLabels[start:end]
 
    def read_images(self, filenames):
       images = []
@@ -194,8 +218,6 @@ f1=open('log', 'w+')
 f1.write('AAAAA\n')
 f1.write("Start %s\n" % time.time())
 f1.flush()
-merged = tf.merge_all_summaries()
-writer = tf.train.SummaryWriter("/tmp/whales", sess.graph_def)
 
 for i in xrange(100):
    step_start = time.time()
@@ -212,7 +234,7 @@ for i in xrange(100):
       f1.write(str(accuracy.eval(feed_dict={x: test[0], y_: yTest, keep_prob: 1.0}))+'\n')
       f1.flush()
 
-   batch = dataset.get_batch(batchSize)
+   batch = dataset.get_sequential_batch(batchSize)
    labels = batch[1]
 
    # Format the Y for this step
