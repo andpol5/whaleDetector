@@ -109,7 +109,7 @@ class DataSet(object):
     images = []
 
     for file in filenames:
-      im = cv2.imread(file)[:,:,0]
+      im = cv2.imread(file, flags=cv2.IMREAD_GRAYSCALE)
       images.append(im.flatten())
     return np.asarray(images)
 

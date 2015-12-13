@@ -84,27 +84,10 @@ class Dataset(object):
 
    def read_images(self, filenames):
       images = []
-   
-      reader = tf.WholeFileReader()
-      
-      if len(filenames) > 0:
-         jpeg_file_queue = tf.train.string_input_producer(filenames)
-         jkey, jvalue = reader.read(jpeg_file_queue)
-         j_img = tf.image.decode_jpeg(jvalue)
 
-      with tf.Session() as sess:
-         # Start populating the filename queue.
-         coord = tf.train.Coordinator()
-         threads = tf.train.start_queue_runners(coord=coord)
-
-         if len(filenames) > 0:
-            for i in range(len(filenames)):
-               jpeg = j_img.eval()
-               images.append(jpeg.flatten())
-         
-         coord.request_stop()
-         coord.join(threads)
-      
+      for file in filenames:
+         im = cv2.imread(file, flags=cv2.IMREAD_GRAYSCALE)
+         images.append(im.flatten())
       return np.asarray(images)
 
 # Tensorflow convinience functions
@@ -127,7 +110,7 @@ sess = tf.InteractiveSession()
 
 # Constants 
 nClasses = 2
-imageSize = 128*128
+imageSize = 192*48
 batchSize = 50
 
 # The size of the images is 200x150
@@ -136,8 +119,8 @@ x = tf.placeholder("float", shape=[None, imageSize], name="Input")
 y_ = tf.placeholder("float", shape=[None, nClasses], name = "Output")
 
 # CONVOLUTIONAL NEURAL NET
-# The first two dimensions are the patch size, the next is the number of input channels, 
-# and the last is the number of output channels. 
+# The first two dimensions are the patch size, the next is the number of input channels,
+# and the last is the number of output channels.
 # We will also have a bias vector with a component for each output channel.
 d1 = 36
 d2 = 32
@@ -147,18 +130,18 @@ d5 = 300
 W_conv1 = weight_variable([5, 5, 1, d1], name="Weights_conv1")
 b_conv1 = bias_variable([d1], name="b_conv1")
 
-# To apply the layer, we first reshape x to a 4d tensor, with the second 
-# and third dimensions corresponding to image width and height, 
+# To apply the layer, we first reshape x to a 4d tensor, with the second
+# and third dimensions corresponding to image width and height,
 # and the final dimension corresponding to the number of color channels.
-x_image = tf.reshape(x, [-1,128,128,1])
+x_image = tf.reshape(x, [-1,192,48,1])
 
-# We then convolve x_image with the weight tensor, 
+# We then convolve x_image with the weight tensor,
 # add the bias, apply the ReLU function, and finally max pool.
 h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1)
 h_pool1 = max_pool_2x2(h_conv1, name="pool1")
 
 # SECOND CONV LAYER
-# In order to build a deep network, we stack several layers of this type. 
+# In order to build a deep network, we stack several layers of this type.
 # The second layer will have 64 features for each 5x5 patch.
 W_conv2 = weight_variable([5, 5, d1, d2], name="Weights_conv2")
 b_conv2 = bias_variable([d2], name="biases_conv2")
@@ -172,8 +155,8 @@ b_conv3 = bias_variable([d3], name="biases_conv3")
 
 h_conv3 = tf.nn.relu(conv2d(h_pool2, W_conv3) + b_conv3)
 h_pool3 = max_pool_2x2(h_conv3, name="pool3")
-h_pool3_slice = tf.slice(h_pool3, [0, 0, 0, 0], [50, 16, 16, 1])
-h_pool3_img = tf.reshape(h_pool3_slice, [50, 16, 16, 1])
+h_pool3_slice = tf.slice(h_pool3, [0, 0, 0, 0], [50, 24, 6, 1])
+h_pool3_img = tf.reshape(h_pool3_slice, [50, 24, 6, 1])
 tf.image_summary('filtered', h_pool3_img, max_images=50)
 
 # FORTH CONV LAYER
@@ -185,15 +168,15 @@ h_pool4 = max_pool_2x2(h_conv4, name="pool4")
 
 
 # DENSELY CONNECTED LAYER
-# Now that the image size has been reduced to 7x7, 
-# we add a fully-connected layer with 1024 neurons to allow processing on the entire image. 
-# We reshape the tensor from the pooling layer into a batch of vectors, multiply by a weight 
+# Now that the image size has been reduced to 7x7,
+# we add a fully-connected layer with 1024 neurons to allow processing on the entire image.
+# We reshape the tensor from the pooling layer into a batch of vectors, multiply by a weight
 # matrix, add a bias, and apply a ReLU.
 
-W_fc1 = weight_variable([8*8*d4, d5], name="Weights_fc1")
+W_fc1 = weight_variable([12*3*d4, d5], name="Weights_fc1")
 b_fc1 = bias_variable([d5], name="biases_fc1")
 
-h_pool4_flat = tf.reshape(h_pool4, [-1, 8*8*d4])
+h_pool4_flat = tf.reshape(h_pool4, [-1, 12*3*d4])
 h_fc1 = tf.nn.relu(tf.matmul(h_pool4_flat, W_fc1) + b_fc1)
 
 # DROPOUT
@@ -206,7 +189,7 @@ b_fc2 = bias_variable([nClasses], name="biases_fc2")
 y_conv=tf.nn.softmax(tf.matmul(h_fc1_drop, W_fc2) + b_fc2)
 
 # Load the dataset
-dataset = Dataset('jack_jill_imgs', 'jackAndJill.csv')
+dataset = Dataset('noses', 'jackAndJill.csv')
 
 # Train and eval the model
 cross_entropy = -tf.reduce_sum(y_*tf.log(tf.clip_by_value(y_conv,1e-10,1.0)))
@@ -230,7 +213,7 @@ saver = tf.train.Saver()
 
 for i in xrange(100):
    step_start = time.time()
-   
+
    if i%10 == 0 and i!=0:
       test = dataset.get_batch(80)
       testLabels = test[1]

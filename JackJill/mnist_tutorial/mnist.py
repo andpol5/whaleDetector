@@ -36,11 +36,11 @@ import tensorflow.python.platform
 import tensorflow as tf
 
 # The MNIST dataset has 10 classes, representing the digits 0 through 9.
-NUM_CLASSES = 10
+NUM_CLASSES = 2
 
 # The MNIST images are always 28x28 pixels.
-IMAGE_SIZE = 128
-IMAGE_PIXELS = IMAGE_SIZE * IMAGE_SIZE
+
+IMAGE_PIXELS = 192 * 48
 
 
 def inference(images, hidden1_units, hidden2_units):

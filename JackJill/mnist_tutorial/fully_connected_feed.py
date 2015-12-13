@@ -40,7 +40,7 @@ flags.DEFINE_integer('hidden1', 256, 'Number of units in hidden layer 1.')
 flags.DEFINE_integer('hidden2', 128, 'Number of units in hidden layer 2.')
 flags.DEFINE_integer('batch_size', 20, 'Batch size.  '
                      'Must divide evenly into the dataset sizes.')
-flags.DEFINE_string('train_dir', '../jack_jill_imgs', 'Directory to put the training data.')
+flags.DEFINE_string('train_dir', '../noses', 'Directory to put the training data.')
 flags.DEFINE_string('labels_file', '../jackAndJill.csv', 'File with labels.')
 flags.DEFINE_boolean('fake_data', False, 'If true, uses fake data '
                      'for unit testing.')
@@ -63,7 +63,7 @@ def placeholder_inputs(batch_size):
   # image and label tensors, except the first dimension is now batch_size
   # rather than the full size of the train or test data sets.
   images_placeholder = tf.placeholder(tf.float32, shape=(batch_size,
-                                                         128*128))
+                                                         192*48))
   labels_placeholder = tf.placeholder(tf.int32, shape=(batch_size))
   return images_placeholder, labels_placeholder
 
@@ -201,7 +201,7 @@ def run_training():
         summary_writer.add_summary(summary_str, step)
 
       # Save a checkpoint and evaluate the model periodically.
-      if (step + 1) % 1000 == 0 or (step + 1) == FLAGS.max_steps:
+      # if (step + 1) % 1000 == 0 or (step + 1) == FLAGS.max_steps:
         saver.save(sess, FLAGS.train_dir, global_step=step)
         # Evaluate against the training set.
         print('Training Data Eval:')
