@@ -13,7 +13,6 @@ def getAllImageFiles():
             matches.append(filename)
     return matches
 
-
 imageFileList = getAllImageFiles()
 
 # resize all images to the average height and weight
