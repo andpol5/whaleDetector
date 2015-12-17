@@ -99,8 +99,8 @@ class DataSets(object):
             self.labels = np.array([l[x-1] for x in self.origLabels])
 
             size = len(self.images)
-            self.valInd = range(size-200-1, size-1) #random.permutation(len(self.images))[:20]
-            self.trainInd = range(0, size-200-2)
+            self.valInd = range(size-200, size) #random.permutation(len(self.images))[:20]
+            self.trainInd = range(0, size-200)
                   
             self.trainImages = self.images[self.trainInd]
             self.trainLabels = self.labels[self.trainInd]
