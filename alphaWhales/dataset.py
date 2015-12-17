@@ -32,6 +32,10 @@ class DataSet(object):
   def getAll(self):
       return self.read_images([os.path.join(self.inputDir, x) for x in self.images]), self.labels
 
+  def get_random_batch(self, batchSize):
+    randInd = random.permutation(len(self.images))[:batchSize]
+    return self.read_images([os.path.join(self.inputDir, x) for x in self.images[randInd]]), self.labels[randInd]
+
   def get_sequential_batch(self, batchSize):
     start = self.indexInEpoch
     self.indexInEpoch += batchSize
@@ -59,7 +63,7 @@ class DataSet(object):
     return np.asarray(images)
 
 class DataSets(object):
-    def __init__(self, inputDir, labelsFile, j):
+    def __init__(self, inputDir, labelsFile):
         
         self.inputDir = inputDir
         output = np.genfromtxt(labelsFile, skip_header=1, dtype=[('image', 'S10'), ('label', 'S11')], delimiter=',')
@@ -93,9 +97,10 @@ class DataSets(object):
            l[k-1] = i
            i += 1
         self.labels = np.array([l[x-1] for x in self.origLabels])
-         
-        self.valInd = range(j*20, (j+1)*20) #random.permutation(len(self.images))[:20]
-        self.trainInd = np.delete(range(0, len(self.images)), self.valInd)
+
+        size = len(self.images)
+        self.valInd = range(size-200-1, size-1) #random.permutation(len(self.images))[:20]
+        self.trainInd = range(0, size-200-2)
             
         self.trainImages = self.images[self.trainInd]
         self.trainLabels = self.labels[self.trainInd]
@@ -104,9 +109,9 @@ class DataSets(object):
         self.valLabels = self.labels[self.valInd]
     
 
-def read_data_sets(trainDir, labelsFile, j):
+def read_data_sets(trainDir, labelsFile):
 
-  data_sets = DataSets(trainDir, labelsFile, j)
+  data_sets = DataSets(trainDir, labelsFile)
 
   data_sets.train = DataSet(trainDir, data_sets.trainImages, data_sets.trainLabels)
   data_sets.validation = DataSet(trainDir, data_sets.valImages, data_sets.valLabels)
