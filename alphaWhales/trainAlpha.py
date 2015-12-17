@@ -28,11 +28,10 @@ def max_pool_2x2(x, name):
 start_time = time.time()
 
 #    # Force CPU only mode
-# with tf.device('/cpu:0'):
-while(1):
+with tf.device('/cpu:0'):
    # Creates a session with log_device_placement set to True.
-   # sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
-   sess = tf.Session()
+   sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
+   # sess = tf.Session()
 
 
    # Constants
