@@ -37,7 +37,7 @@ with tf.device('/cpu:0'):
    # Constants
    nClasses = 38
    imageSize = 128*128
-   batchSize = 17
+   batchSize = 20
 
    # The size of the images is 200x150
    x = tf.placeholder("float", shape=[None, imageSize], name="Input")
@@ -89,7 +89,6 @@ with tf.device('/cpu:0'):
    h_conv4 = tf.nn.relu6(conv2d(h_pool3, W_conv4) + b_conv4)
    h_pool4 = max_pool_2x2(h_conv4, name="pool4")
 
-
    # DENSELY CONNECTED LAYER
    # Now that the image size has been reduced to 7x7,
    # we add a fully-connected layer with 1024 neurons to allow processing on the entire image.
@@ -124,12 +123,11 @@ with tf.device('/cpu:0'):
    accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
    sess.run(tf.initialize_all_variables())
 
-
    summary_op = tf.merge_all_summaries()
    summary_writer = tf.train.SummaryWriter('/tmp/whales', graph_def=sess.graph_def)
    saver = tf.train.Saver()
 
-   for i in xrange(1000):
+   for i in xrange(10000):
       step_start = time.time()
 
       batch = datasets.train.get_sequential_batch(batchSize)
@@ -156,11 +154,10 @@ with tf.device('/cpu:0'):
                                                    feed_dict={x: batch[0], y_: yTrain, keep_prob: 1.0})
          f1.write("Cross entropy = " + str(cross_entropyD) + "\n")
          f1.write("Accuracy = " + str(acc) + "\n")
-         f1.write("Sum of 1: %d\n" % (sum(batch[1])))
          f1.write("Correct prediction %d\n" % (sum(correct_predictionD)))
          f1.write("y %s\n" % str(batch[1]))
          f1.write("y from net %s\n" % str(np.argmax(y_convD, axis=1)))
-         f1.write("\n--- %s seconds ---\n\n" % (time.time() - step_start))
+         f1.write("\n--- %s seconds ---\n\n" % (time.time() - start_time))
          f1.flush()
 
    # Evaluate the prediction
@@ -174,7 +171,6 @@ with tf.device('/cpu:0'):
    acc, y_convD, correct_predictionD = sess.run([accuracy, y_conv, correct_prediction],
                                                 feed_dict={x: test[0], y_: yTest, keep_prob: 1.0})
    f1.write("Accuracy = " + str(acc) + "\n")
-   f1.write("Sum of 1: %d\n" % (sum(test[1])))
    f1.write("Correct prediction %d\n" % (sum(correct_predictionD)))
    f1.write("y %s\n" % str(test[1]))
    f1.write("y from net %s\n" % str(np.argmax(y_convD, axis=1)))
