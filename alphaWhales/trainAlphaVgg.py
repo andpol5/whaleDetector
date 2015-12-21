@@ -4,7 +4,7 @@ import tensorflow as tf
 import time
 import dataset
 
-f1=open('log', 'w+')
+f1=open('log_%d' % time.time(), 'w+')
 f1.write('AAAAA\n')
 f1.write("Start %s\n" % time.time())
 f1.flush()
@@ -85,7 +85,7 @@ with tf.device('/cpu:0'):
    # FIRST SUBLAYER (64 features, 2 convolutions)
    w_conv11 = weight_variable([3, 3, 1, 64], name="Weights_conv11")
    b_conv11 = bias_variable([64], name="b_conv11")
-   w_conv12 = weight_variable([3, 3, 1, 64], name="Weights_conv12")
+   w_conv12 = weight_variable([3, 3, 64, 64], name="Weights_conv12")
    b_conv12 = bias_variable([64], name="b_conv12")
 
    # To apply the layer, we first reshape x to a 4d tensor, with the second
@@ -96,13 +96,13 @@ with tf.device('/cpu:0'):
    # We then convolve x_image with the weight tensor,
    # add the bias, apply the ReLU function (repeat from step 1) and finally max pool.
    h_conv11 = tf.nn.relu(conv2d(x_image, w_conv11) + b_conv11)
-   h_conv11 = tf.nn.relu(conv2d(h_conv11, w_conv12) + b_conv12)
+   h_conv12 = tf.nn.relu(conv2d(h_conv11, w_conv12) + b_conv12)
    h_pool1 = max_pool_2x2(h_conv12, name="pool1")
 
    # SECOND SUBLAYER (128 features, 2 convolutions)
-   w_conv21 = weight_variable([3, 3, 1, 128], name="Weights_conv21")
+   w_conv21 = weight_variable([3, 3, 64, 128], name="Weights_conv21")
    b_conv21 = bias_variable([128], name="b_conv21")
-   w_conv22 = weight_variable([3, 3, 1, 128], name="Weights_conv22")
+   w_conv22 = weight_variable([3, 3, 128, 128], name="Weights_conv22")
    b_conv22 = bias_variable([128], name="b_conv22")
 
    h_conv21 = tf.nn.relu(conv2d(h_pool1, w_conv21)  + b_conv21)
@@ -110,11 +110,11 @@ with tf.device('/cpu:0'):
    h_pool2 = max_pool_2x2(h_conv22, name="pool2")
 
    # THIRD SUBLAYER (256 features, 3 convolutions)
-   w_conv31 = weight_variable([3, 3, 1, 256], name="Weights_conv31")
+   w_conv31 = weight_variable([3, 3, 128, 256], name="Weights_conv31")
    b_conv31 = bias_variable([256], name="b_conv31")
-   w_conv32 = weight_variable([3, 3, 1, 256], name="Weights_conv32")
+   w_conv32 = weight_variable([3, 3, 256, 256], name="Weights_conv32")
    b_conv32 = bias_variable([256], name="b_conv32")
-   w_conv33 = weight_variable([3, 3, 1, 256], name="Weights_conv33")
+   w_conv33 = weight_variable([3, 3, 256, 256], name="Weights_conv33")
    b_conv33 = bias_variable([256], name="b_conv33")
 
    h_conv31 = tf.nn.relu(conv2d(h_pool2, w_conv31)  + b_conv31)
@@ -123,11 +123,11 @@ with tf.device('/cpu:0'):
    h_pool3 = max_pool_2x2(h_conv33, name="pool3")
 
    # FOURTH SUBLAYER (512 features, 3 convolutions)
-   w_conv41 = weight_variable([3, 3, 1, 512], name="Weights_conv41")
+   w_conv41 = weight_variable([3, 3, 256, 512], name="Weights_conv41")
    b_conv41 = bias_variable([512], name="b_conv41")
-   w_conv42 = weight_variable([3, 3, 1, 512], name="Weights_conv42")
+   w_conv42 = weight_variable([3, 3, 512, 512], name="Weights_conv42")
    b_conv42 = bias_variable([512], name="b_conv42")
-   w_conv43 = weight_variable([3, 3, 1, 512], name="Weights_conv43")
+   w_conv43 = weight_variable([3, 3, 512, 512], name="Weights_conv43")
    b_conv43 = bias_variable([512], name="b_conv43")
 
    h_conv41 = tf.nn.relu(conv2d(h_pool3, w_conv41)  + b_conv41)
@@ -136,11 +136,11 @@ with tf.device('/cpu:0'):
    h_pool4 = max_pool_2x2(h_conv43, name="pool4")
 
    # FIFTH SUBLAYER (512 features, 3 convolutions)
-   w_conv51 = weight_variable([3, 3, 1, 512], name="Weights_conv51")
+   w_conv51 = weight_variable([3, 3, 512, 512], name="Weights_conv51")
    b_conv51 = bias_variable([512], name="b_conv51")
-   w_conv52 = weight_variable([3, 3, 1, 512], name="Weights_conv52")
+   w_conv52 = weight_variable([3, 3, 512, 512], name="Weights_conv52")
    b_conv52 = bias_variable([512], name="b_conv52")
-   w_conv53 = weight_variable([3, 3, 1, 512], name="Weights_conv53")
+   w_conv53 = weight_variable([3, 3, 512, 512], name="Weights_conv53")
    b_conv53 = bias_variable([512], name="b_conv53")
 
    h_conv51 = tf.nn.relu(conv2d(h_pool4, w_conv51)  + b_conv51)
@@ -166,21 +166,22 @@ with tf.device('/cpu:0'):
    h_pool5_flat = tf.reshape(h_pool5, [-1, 8*8*512])
    h_fc1 = tf.nn.relu(tf.matmul(h_pool5_flat, w_fc1) + b_fc1)
    # Dropout of fc1 (dropout keep probability of 0.5)
-   h_fc1_drop = tf.nn.dropout(h_fc1, 0.5)
+   keep_prob = tf.placeholder("float")
+   h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
 
    # Fully connected layer 2
    w_fc2 = weight_variable([4096, 4096], name="Weights_fc2")
    b_fc2 = bias_variable([4096], name="biases_fc2")
    h_fc2 = tf.nn.relu(tf.matmul(h_fc1_drop, w_fc2) + b_fc2)
-   h_fc2_drop = tf.nn.dropout(h_fc2, 0.5)
+   h_fc2_drop = tf.nn.dropout(h_fc2, keep_prob)
 
    # Readout layer
    w_fc3 = weight_variable([4096, nClasses], name="Weights_fc3")
    b_fc3 = bias_variable([nClasses], name="biases_fc3")
-   y_conv = tf.nn.softmax(tf.matmul(h_fc2_drop, W_fc3) + b_fc3)
+   y_conv = tf.nn.softmax(tf.matmul(h_fc2_drop, w_fc3) + b_fc3)
 
    # Load the dataset
-   datasets = dataset.read_data_sets('imgs', 'whales.csv')
+   datasets = dataset.read_data_sets('train', 'validation', 'whales.csv')
 
    # Train and eval the model
    cross_entropy = -tf.reduce_sum(y_*tf.log(tf.clip_by_value(y_conv,1e-10,1.0)))
@@ -206,27 +207,27 @@ with tf.device('/cpu:0'):
       yTrain = np.zeros((batchSize, nClasses))
       for j in xrange(batchSize):
          yTrain[j-1][ int(labels[j-1]) ] = 1
-      train_step.run(feed_dict={x: batch[0], y_: yTrain, keep_prob: 0.5}, session=sess)
+      train_step.run(feed_dict={x: batch[0], y_: yTrain, keep_prob:0.5}, session=sess)
 
       if i%25 == 0 and i != 0:
-         #evaluate accuracy on random 100 samples from train set
+         #evaluate accuracy on random batch of 100 samples
          batch = datasets.train.get_random_batch(100)
          labels = batch[1]
 
-         # Format the Y for this step
          yTrain = np.zeros((len(batch[1]), nClasses))
          for j in xrange(len(batch[1])):
             yTrain[j][ int(labels[j]) ] = 1
          f1.write("step %d finished, time = %s\n" %(i, time.time() - step_start))
-         acc, y_convD, correct_predictionD, cross_entropyD = sess.run([accuracy, y_conv, correct_prediction, cross_entropy],
-                                                   feed_dict={x: batch[0], y_: yTrain, keep_prob: 1.0})
+         acc, cross_entropyD, summary_str = sess.run([accuracy, cross_entropy, summary_op],
+                                                   feed_dict={x: batch[0], y_: yTrain, keep_prob: 1})
          f1.write("Cross entropy = " + str(cross_entropyD) + "\n")
          f1.write("Accuracy = " + str(acc) + "\n")
-         f1.write("Correct prediction %d\n" % (sum(correct_predictionD)))
-         f1.write("y %s\n" % str(batch[1]))
-         f1.write("y from net %s\n" % str(np.argmax(y_convD, axis=1)))
          f1.write("\n--- %s seconds ---\n\n" % (time.time() - start_time))
          f1.flush()
+         summary_writer.add_summary(summary_str, i)
+
+      f1.write("\nstep %d finished, %d seconds \n" % (i, time.time() - start_time))
+      f1.flush()
 
    # Evaluate the prediction
    test = datasets.validation.getAll()
