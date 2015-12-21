@@ -33,11 +33,10 @@ with tf.device('/cpu:0'):
    sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
    # sess = tf.Session()
 
-
    # Constants
    nClasses = 38
    imageSize = 128*128
-   batchSize = 20
+   batchSize = 50
 
    # The size of the images is 200x150
    x = tf.placeholder("float", shape=[None, imageSize], name="Input")
@@ -52,8 +51,10 @@ with tf.device('/cpu:0'):
    d2 = 32
    d3 = 64
    d4 = 64
-   d5 = 300
-   W_conv1 = weight_variable([5, 5, 1, d1], name="Weights_conv1")
+   d5 = 64
+   fc = 300
+
+   W_conv1 = weight_variable([7, 7, 1, d1], name="Weights_conv1")
    b_conv1 = bias_variable([d1], name="b_conv1")
 
    # To apply the layer, we first reshape x to a 4d tensor, with the second
@@ -81,6 +82,9 @@ with tf.device('/cpu:0'):
 
    h_conv3 = tf.nn.relu(conv2d(h_pool2, W_conv3) + b_conv3)
    h_pool3 = max_pool_2x2(h_conv3, name="pool3")
+   #h_pool3_slice = tf.slice(h_pool3, [0, 0, 0, 0], [50, 24, 6, 1])
+   #h_pool3_img = tf.reshape(h_pool3_slice, [20, 24, 6, 1])
+   #tf.image_summary('filtered', h_pool3_img, max_images=20)
 
    # FORTH CONV LAYER
    W_conv4 = weight_variable([3, 3, d3, d4], name="Weights_conv4")
@@ -88,6 +92,11 @@ with tf.device('/cpu:0'):
 
    h_conv4 = tf.nn.relu6(conv2d(h_pool3, W_conv4) + b_conv4)
    h_pool4 = max_pool_2x2(h_conv4, name="pool4")
+   # FIFTH CONV LAYER
+   W_conv5 = weight_variable([3, 3, d4, d5], name="Weights_conv5")
+   b_conv5 = bias_variable([d5], name="biases_conv5")
+  
+   h_conv5 = tf.nn.relu6(conv2d(h_pool4, W_conv5) + b_conv5)
 
    # DENSELY CONNECTED LAYER
    # Now that the image size has been reduced to 7x7,
@@ -95,18 +104,18 @@ with tf.device('/cpu:0'):
    # We reshape the tensor from the pooling layer into a batch of vectors, multiply by a weight
    # matrix, add a bias, and apply a ReLU.
 
-   W_fc1 = weight_variable([8*8*d4, d5], name="Weights_fc1")
-   b_fc1 = bias_variable([d5], name="biases_fc1")
+   W_fc1 = weight_variable([8*8*d5, fc], name="Weights_fc1")
+   b_fc1 = bias_variable([fc], name="biases_fc1")
 
-   h_pool4_flat = tf.reshape(h_pool4, [-1, 8*8*d4])
-   h_fc1 = tf.nn.relu(tf.matmul(h_pool4_flat, W_fc1) + b_fc1)
+   h_conv5_flat = tf.reshape(h_conv5, [-1, 8*8*d5])
+   h_fc1 = tf.nn.relu(tf.matmul(h_conv5_flat, W_fc1) + b_fc1)
 
    # DROPOUT
    keep_prob = tf.placeholder("float")
    h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
 
    # READOUT LAYER
-   W_fc2 = weight_variable([d5, nClasses], name="Weights_fc2")
+   W_fc2 = weight_variable([fc, nClasses], name="Weights_fc2")
    b_fc2 = bias_variable([nClasses], name="biases_fc2")
    y_conv=tf.nn.softmax(tf.matmul(h_fc1_drop, W_fc2) + b_fc2)
 
@@ -139,8 +148,7 @@ with tf.device('/cpu:0'):
          yTrain[j-1][ int(labels[j-1]) ] = 1
       train_step.run(feed_dict={x: batch[0], y_: yTrain, keep_prob: 0.5}, session=sess)
 
-      if i%10 == 0 and i != 0:
-
+      if i%25 == 0 and i != 0:
          #evaluate accuracy on random 100 samples from train set
          batch = datasets.train.get_random_batch(100)
          labels = batch[1]
@@ -171,6 +179,7 @@ with tf.device('/cpu:0'):
    acc, y_convD, correct_predictionD = sess.run([accuracy, y_conv, correct_prediction],
                                                 feed_dict={x: test[0], y_: yTest, keep_prob: 1.0})
    f1.write("Accuracy = " + str(acc) + "\n")
+   f1.write("Sum of 1: %d\n" % (sum(test[1])))
    f1.write("Correct prediction %d\n" % (sum(correct_predictionD)))
    f1.write("y %s\n" % str(test[1]))
    f1.write("y from net %s\n" % str(np.argmax(y_convD, axis=1)))
