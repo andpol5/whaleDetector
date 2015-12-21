@@ -14,12 +14,43 @@ from scipy import random
 
 class DataSet(object):
 
-   def __init__(self, inputDir, images, labels):
-         self.indexInEpoch = 0
-         self.epochsCompleted = 0
-         self.images = images
-         self.labels = labels
-         self.inputDir = inputDir
+   def __init__(self, inputDir, labelsFile):
+      self.indexInEpoch = 0
+      self.epochsCompleted = 0
+
+      self.inputDir = inputDir
+      output = np.genfromtxt(labelsFile, skip_header=1, dtype=[('image', 'S10'), ('label', 'S11')], delimiter=',')
+
+      labels = [x[1] for x in output]
+
+      self.numberOfClasses = len(set(labels))
+      self.filenames = []
+
+      for file in os.listdir(inputDir):
+         if (file.endswith('.jpg')):
+            self.filenames.append(file)
+
+      self.filenames = np.array(self.filenames)
+      self.labelsDict = {int(re.search("w_(\\d+)\.jpg", x[0]).group(1)): int(re.search("whale_(\\d+)", x[1]).group(1))
+                         for x in output}
+
+      # to provide default values
+      self.labelsDict = defaultdict(lambda: 0, self.labelsDict)
+
+      self.examples = [int(re.search("w_(\\d+).jpg", x).group(1)) for x in self.filenames]
+      self.allLabels = [self.labelsDict[x] for x in self.examples]
+      self.allLabels = np.array(self.allLabels)
+
+      self.imagesIds = np.array(self.examples)
+      self.images = self.filenames[self.allLabels > 0]
+      self.origLabels = self.allLabels[self.allLabels > 0]
+
+      l = np.zeros(max(self.origLabels))
+      i = 0
+      for k in sorted(set(self.origLabels)):
+         l[k - 1] = i
+         i += 1
+      self.labels = np.array([l[x - 1] for x in self.origLabels])
 
    @property
    def num_examples(self):
@@ -62,58 +93,14 @@ class DataSet(object):
          images.append(im.flatten())
       return np.asarray(images)
 
-class DataSets(object):
-      def __init__(self, inputDir, labelsFile):
-            
-            self.inputDir = inputDir
-            output = np.genfromtxt(labelsFile, skip_header=1, dtype=[('image', 'S10'), ('label', 'S11')], delimiter=',')
-      
-            labels = [x[1] for x in output]
-      
-            self.numberOfClasses = len(set(labels))
-            self.filenames = []
-         
-            for file in os.listdir(inputDir):
-               if(file.endswith('.jpg')):
-                  self.filenames.append(file)
-      
-            self.filenames = np.array(self.filenames)
-            self.labelsDict = {int(re.search("w_(\\d+)\.jpg", x[0]).group(1)):int(re.search("whale_(\\d+)", x[1]).group(1)) for x in output}
-      
-            # to provide default values
-            self.labelsDict = defaultdict(lambda:0, self.labelsDict)
-      
-            self.examples = [int(re.search("w_(\\d+).jpg",x).group(1)) for x in self.filenames]
-            self.allLabels = [self.labelsDict[x] for x in self.examples]
-            self.allLabels = np.array(self.allLabels)
-      
-            self.imagesIds = np.array(self.examples)
-            self.images = self.filenames[self.allLabels > 0]
-            self.origLabels = self.allLabels[self.allLabels > 0]
-      
-            l = np.zeros(max(self.origLabels))
-            i = 0
-            for k in sorted(set(self.origLabels)):
-               l[k-1] = i
-               i += 1
-            self.labels = np.array([l[x-1] for x in self.origLabels])
 
-            size = len(self.images)
-            self.valInd = range(size-200, size) #random.permutation(len(self.images))[:20]
-            self.trainInd = range(0, size-200)
-                  
-            self.trainImages = self.images[self.trainInd]
-            self.trainLabels = self.labels[self.trainInd]
-            
-            self.valImages = self.images[self.valInd]
-            self.valLabels = self.labels[self.valInd]
-      
+def read_data_sets(trainDir, validationDir, labelsFile):
+   class DataSets(object):
+      pass
 
-def read_data_sets(trainDir, labelsFile):
+   data_sets = DataSets()
 
-   data_sets = DataSets(trainDir, labelsFile)
-
-   data_sets.train = DataSet(trainDir, data_sets.trainImages, data_sets.trainLabels)
-   data_sets.validation = DataSet(trainDir, data_sets.valImages, data_sets.valLabels)
+   data_sets.train = DataSet(trainDir, labelsFile)
+   data_sets.validation = DataSet(validationDir, labelsFile)
 
    return data_sets
