@@ -44,7 +44,7 @@ start_time = time.time()
 # CONV3-384:    [13x13x384]     conv31
 # CONV3-384:    [13x13x384]     conv32
 # CONV3-256:    [13x13x256]     conv33
-# POOL3:        [5x5x256]     pool3
+# POOL3:        [6x6x256]     pool3
 ########################################
 ## Fully connected layer
 # FC:           [1x1x4096]      fc1
@@ -63,7 +63,7 @@ with tf.device('/cpu:0'):
    imageSize = 227*227
    batchSize = 120
 
-   # The size of the images is 227x227`
+   # The size of the images is 227x227
    x = tf.placeholder("float", shape=[None, imageSize], name="Input")
    # There are 4 classes (labels)
    y_ = tf.placeholder("float", shape=[None, nClasses], name = "Output")
@@ -103,7 +103,7 @@ with tf.device('/cpu:0'):
    h_pool3 = max_pool_3x3(h_conv33, name="pool3")
 
    # DENSELY CONNECTED LAYER
-   # Now that the image size has been reduced to 5x5,
+   # Now that the image size has been reduced to 6x6,
    # we add a fully-connected layer with 4096 neurons to allow processing on the entire image.
    # We reshape the tensor from the pooling layer into a batch of vectors, multiply by a weight
    # matrix, add a bias, and apply a ReLU.
@@ -114,10 +114,10 @@ with tf.device('/cpu:0'):
    # FC:           [1x1x38]        fc3 (to output)
 
    # Fully connected layer 1 (4096 neurons)
-   w_fc1 = weight_variable([5*5*256, 4096], name="Weights_fc1")
+   w_fc1 = weight_variable([6*6*256, 4096], name="Weights_fc1")
    b_fc1 = bias_variable([4096], name="biases_fc1")
 
-   h_pool3_flat = tf.reshape(h_pool3, [-1, 5*5*256])
+   h_pool3_flat = tf.reshape(h_pool3, [-1, 6*6*256])
    h_fc1 = tf.nn.relu(tf.matmul(h_pool3_flat, w_fc1) + b_fc1)
    # Dropout of fc1 (dropout keep probability of 0.5)
    keep_prob = tf.placeholder("float")
