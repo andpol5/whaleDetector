@@ -198,7 +198,6 @@ def doAlexNet(trainDir, valDir, trainCsv, valCsv):
       acc, y_convD, correct_predictionD = sess.run([accuracy, y_conv, correct_prediction],
                                                    feed_dict={x: test[0], y_: yTest, keep_prob: 1.0})
       f1.write("Accuracy = " + str(acc) + "\n")
-      f1.write("Sum of 1: %d\n" % (sum(test[1])))
       f1.write("Correct prediction %d\n" % (sum(correct_predictionD)))
       f1.write("y %s\n" % str(test[1]))
       f1.write("y from net %s\n" % str(np.argmax(y_convD, axis=1)))
