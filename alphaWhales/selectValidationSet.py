@@ -18,12 +18,12 @@ filenames = []
 
 testset = []
 
-indir = 'alphaWhales-001/imgs'
+indir = 'train'
 for file in os.listdir(indir):
    if(file.endswith('.jpg')):
       filenames.append(file)
 
-testdir = 'testSet'
+testdir = 'test'
 for file in os.listdir(testdir):
    if(file.endswith('.jpg')):
       testset.append(file)
@@ -39,7 +39,7 @@ for w in set(whales):
     allExamplesForW = labelsDict[w]
     allExamplesForW = [x for x in allExamplesForW if x not in testset]
     allExamplesForW = random.permutation(allExamplesForW)
-    for i in allExamplesForW[0:5]:
+    for i in allExamplesForW[0:(len(allExamplesForW)/2)+(random.randint(0,(len(allExamplesForW))%2+1))]:
         print("copying %d\n"%i)
         os.rename(("%s/w_%d.jpg") % (indir, i), ("%s/w_%d.jpg") %(validationDir, i))
 

@@ -169,11 +169,11 @@ with tf.device('/cpu:0'):
    y_conv = tf.nn.softmax(tf.matmul(h_fc2_drop, w_fc3) + b_fc3)
 
    # Load the dataset
-   datasets = dataset.read_data_sets('train', 'validation', 'whales.csv')
+   datasets = dataset.read_data_sets('batch1', 'batch2', 'batch1/train.csv', 'batch2/validation.csv')
 
    # Train and eval the model
    cross_entropy = -tf.reduce_sum(y_*tf.log(tf.clip_by_value(y_conv,1e-10,1.0)))
-   tf.scalar_summary('cross entropy', cross_entropy)
+   # tf.scalar_summary('cross entropy', cross_entropy)
 
    # train_step = tf.train.GradientDescentOptimizer(0.00001).minimize(cross_entropy)
    train_step = tf.train.AdamOptimizer(1e-5).minimize(cross_entropy)
@@ -181,8 +181,8 @@ with tf.device('/cpu:0'):
    accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
    sess.run(tf.initialize_all_variables())
 
-   summary_op = tf.merge_all_summaries()
-   summary_writer = tf.train.SummaryWriter('/tmp/whales', graph_def=sess.graph_def)
+   # summary_op = tf.merge_all_summaries()
+   # summary_writer = tf.train.SummaryWriter('/tmp/whales', graph_def=sess.graph_def)
    saver = tf.train.Saver()
 
    for i in xrange(10000):
@@ -206,17 +206,19 @@ with tf.device('/cpu:0'):
          for j in xrange(len(batch[1])):
             yTrain[j][ int(labels[j]) ] = 1
          f1.write("step %d finished, time = %s\n" %(i, time.time() - step_start))
-         acc, cross_entropyD, summary_str = sess.run([accuracy, cross_entropy, summary_op],
+         acc, cross_entropyD = sess.run([accuracy, cross_entropy],
                                                    feed_dict={x: batch[0], y_: yTrain, keep_prob: 1})
          f1.write("Cross entropy = " + str(cross_entropyD) + "\n")
          f1.write("Accuracy = " + str(acc) + "\n")
          f1.write("\n--- %s seconds ---\n\n" % (time.time() - start_time))
          f1.flush()
-         summary_writer.add_summary(summary_str, i)
+         # summary_writer.add_summary(summary_str, i)
 
       f1.write("\nstep %d finished, %d seconds \n" % (i, time.time() - step_start))
       f1.flush()
 
+
+   saver.save(sess, 'my-model', global_step=10000)
    # Evaluate the prediction
    test = datasets.validation.getAll()
    testLabels = test[1]

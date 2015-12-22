@@ -19,7 +19,7 @@ class DataSet(object):
       self.epochsCompleted = 0
 
       self.inputDir = inputDir
-      output = np.genfromtxt(labelsFile, skip_header=1, dtype=[('image', 'S10'), ('label', 'S11')], delimiter=',')
+      output = np.genfromtxt(labelsFile, skip_header=1, dtype=[('image', 'S13'), ('label', 'S11')], delimiter=',')
 
       labels = [x[1] for x in output]
 
@@ -31,13 +31,13 @@ class DataSet(object):
             self.filenames.append(file)
 
       self.filenames = np.array(self.filenames)
-      self.labelsDict = {int(re.search("w_(\\d+)\.jpg", x[0]).group(1)): int(re.search("whale_(\\d+)", x[1]).group(1))
+      self.labelsDict = {re.search("w_(\\w+)\.jpg", x[0]).group(1): int(re.search("whale_(\\d+)", x[1]).group(1))
                          for x in output}
 
       # to provide default values
       self.labelsDict = defaultdict(lambda: 0, self.labelsDict)
 
-      self.examples = [int(re.search("w_(\\d+).jpg", x).group(1)) for x in self.filenames]
+      self.examples = [re.search("w_(\\w+).jpg", x).group(1) for x in self.filenames]
       self.allLabels = [self.labelsDict[x] for x in self.examples]
       self.allLabels = np.array(self.allLabels)
 
@@ -94,13 +94,13 @@ class DataSet(object):
       return np.asarray(images)
 
 
-def read_data_sets(trainDir, validationDir, labelsFile):
+def read_data_sets(trainDir, validationDir, trainFile, validationFile):
    class DataSets(object):
       pass
 
    data_sets = DataSets()
 
-   data_sets.train = DataSet(trainDir, labelsFile)
-   data_sets.validation = DataSet(validationDir, labelsFile)
+   data_sets.train = DataSet(trainDir, trainFile)
+   data_sets.validation = DataSet(validationDir, validationFile)
 
    return data_sets

@@ -9,10 +9,11 @@ import numpy as np
 import cv2
 
 noChangeMat = np.array([[1.,0.,0.],[0.,1.,0.]])
+dir = 'alphaWhales/batch2'
 
 def getAllImageFiles():
     matches = []
-    for root, dirnames, filenames in os.walk(os.getcwd()):
+    for root, dirnames, filenames in os.walk(dir):
         filenames = [ f for f in filenames if os.path.splitext(f)[1] in ('.jpg') ]
         for filename in filenames:
             #matches.append(os.path.join(root, filename))
@@ -60,14 +61,14 @@ deltayPlus10 = 20
 deltayPlus20 = 40
 deltayMinus10 = -20
 deltayMinus20 = -40
-for imageFileName in imageFileList:
-    im = cv2.imread(imageFileName)
-    im = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
+for imageFileName in imageFileList[1:]:
+    im = cv2.imread(dir + "/" + imageFileName, cv2.CV_LOAD_IMAGE_GRAYSCALE)
+    # im = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
 
     # Extract "w_" from filename and write the new files
-    name = imageFileName[2:]
-    cv2.imwrite('w_100' + name, shiftx(im, deltax))
-    cv2.imwrite('w_200' + name, shifty(im, deltayPlus10))
-    cv2.imwrite('w_300' + name, shifty(im, deltayPlus20))
-    cv2.imwrite('w_400' + name, shifty(im, deltayMinus10))
-    cv2.imwrite('w_500' + name, shifty(im, deltayMinus20))
+    name = imageFileName[:-4]
+    cv2.imwrite(dir + "/" + name + '_1.jpg', shiftx(im, deltax))
+    cv2.imwrite(dir + "/" + name + '_2.jpg', shifty(im, deltayPlus10))
+    cv2.imwrite(dir + "/" + name + '_3.jpg', shifty(im, deltayPlus20))
+    cv2.imwrite(dir + "/" + name + '_4.jpg', shifty(im, deltayMinus10))
+    cv2.imwrite(dir + "/" + name + '_5.jpg', shifty(im, deltayMinus20))
