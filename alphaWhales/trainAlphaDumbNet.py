@@ -3,7 +3,7 @@ import numpy as np
 import tensorflow as tf
 import time
 import dataset
-
+import utilities
 
 # Tensorflow convinience functions
 def weight_variable(shape, name):
@@ -92,9 +92,10 @@ def doDumbNet(trainDir, valDir, trainCsv, valCsv):
 
       h_conv3 = tf.nn.sigmoid(conv2d(h_pool2, W_conv3) + b_conv3)
       h_pool3 = max_pool_2x2(h_conv3, name="pool3")
-      # h_pool3_slice = tf.slice(h_pool3, [0, 0, 0, 0], [50, 24, 6, 1])
-      # h_pool3_img = tf.reshape(h_pool3_slice, [20, 24, 6, 1])
-      # tf.image_summary('filtered', h_pool3_img, max_images=20)
+
+      # h_pool3_slice = tf.slice(h_pool3, [0, 0, 0, 0], [10, 28, 28, 1])
+      # h_pool3_img = tf.reshape(h_pool3_slice, [10, 28, 28, 1])
+      # tf.image_summary('filtered', h_pool3_img, max_images=10)
 
       # FORTH CONV LAYER
       W_conv4 = weight_variable([3, 3, d3, d4], name="Weights_conv4")
@@ -147,6 +148,8 @@ def doDumbNet(trainDir, valDir, trainCsv, valCsv):
       #    summary_writer = tf.train.SummaryWriter('/tmp/whales', graph_def=sess.graph_def)
       saver = tf.train.Saver()
       # saver.restore(sess, 'my-model-batch1-10000')
+      # utility = utilities.Utility(datasets, sess, nClasses, x, y_, keep_prob)
+
       for i in xrange(1500):
          step_start = time.time()
 
@@ -169,12 +172,16 @@ def doDumbNet(trainDir, valDir, trainCsv, valCsv):
             for j in xrange(len(batch[1])):
                yTrain[j][int(labels[j])] = 1
             f1.write("step %d finished, time = %s\n" % (i, time.time() - step_start))
+            # acc, cross_entropyD, summary_str = sess.run([accuracy, cross_entropy, summary_op],
+            #                                feed_dict={x: batch[0], y_: yTrain, keep_prob: 1})
             acc, cross_entropyD = sess.run([accuracy, cross_entropy],
                                            feed_dict={x: batch[0], y_: yTrain, keep_prob: 1})
             f1.write("Cross entropy = " + str(cross_entropyD) + "\n")
             f1.write("Accuracy = " + str(acc) + "\n")
             f1.write("\n--- %s seconds ---\n\n" % (time.time() - start_time))
             f1.flush()
+            # summary_writer.add_summary(summary_str, i)
+            # utility.draw(h_pool1, 113, 113, 6, 6)
 
          f1.write("\nstep %d finished, %d seconds \n" % (i, time.time() - step_start))
          f1.flush()
