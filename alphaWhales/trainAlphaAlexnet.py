@@ -63,7 +63,7 @@ def doAlexNet(trainDir, valDir, trainCsv, valCsv):
       # Constants
       nClasses = 38
       imageSize = 227*227
-      batchSize = 128
+      batchSize = 32
 
       # The size of the images is 227x227
       x = tf.placeholder("float", shape=[None, imageSize], name="Input")
@@ -188,7 +188,7 @@ def doAlexNet(trainDir, valDir, trainCsv, valCsv):
          f1.flush()
 
 
-      saver.save(sess, 'my-model-'+trainDir, global_step=10000)
+      saver.save(sess, 'my-model-%s-%d'%(trainDir, start_time), global_step=10000)
       # Evaluate the prediction
       test = datasets.validation.getAll()
       testLabels = test[1]
