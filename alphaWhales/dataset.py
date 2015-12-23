@@ -11,6 +11,16 @@ import re
 import cv2
 from scipy import random
 
+# Whitening algorithm
+def svd_whiten(X):
+    U, s, Vt = np.linalg.svd(X)
+
+    # U and Vt are the singular matrices, and s contains the singular values.
+    # Since the rows of both U and Vt are orthonormal vectors, then U * Vt
+    # will be white
+    X_white = np.dot(U, Vt)
+
+    return X_white
 
 class DataSet(object):
 
@@ -92,6 +102,8 @@ class DataSet(object):
          im = cv2.imread(file, flags=cv2.IMREAD_GRAYSCALE)
          normIm = im.astype(float)
          normIm = (normIm/np.max(normIm))*2.0-1.0
+         whitened = svd_whiten(normIm)
+        #  cv2.imwrite('tmp.jpg', whitened)
          images.append(normIm.flatten())
       return np.asarray(images)
 
