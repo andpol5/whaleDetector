@@ -44,7 +44,9 @@ def doDumbNet(trainDir, valDir, trainCsv, valCsv):
       imageSize = 227 * 227
       batchSize = 10
       learningRate = 1e-5
-
+      f1.write('nClasses: %d, imageSize: %d, batchSize: %d, learningRate: %d\n', nClasses,
+                                                imageSize, batchSize, learningRate)
+      f1.flush()
       # The size of the images is 200x150
       x = tf.placeholder("float", shape=[None, imageSize], name="Input")
       # There are 4 classes (labels)

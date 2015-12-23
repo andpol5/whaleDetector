@@ -63,7 +63,10 @@ def doAlexNet(trainDir, valDir, trainCsv, valCsv):
       # Constants
       nClasses = 38
       imageSize = 227*227
-      batchSize = 32
+      learningRate = 1e-6
+      batchSize = 10
+      f1.write('nClasses: %d, imageSize: %d, batchSize: %d, learningRate: %d\n', nClasses,
+                                                  imageSize, batchSize, learningRate)
 
       # The size of the images is 227x227
       x = tf.placeholder("float", shape=[None, imageSize], name="Input")
@@ -144,7 +147,7 @@ def doAlexNet(trainDir, valDir, trainCsv, valCsv):
       # tf.scalar_summary('cross entropy', cross_entropy)
 
       # train_step = tf.train.GradientDescentOptimizer(0.00001).minimize(cross_entropy)
-      train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
+      train_step = tf.train.AdamOptimizer(learningRate).minimize(cross_entropy)
       correct_prediction = tf.equal(tf.argmax(y_conv,1), tf.argmax(y_,1))
       accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
       sess.run(tf.initialize_all_variables())
@@ -167,7 +170,7 @@ def doAlexNet(trainDir, valDir, trainCsv, valCsv):
             yTrain[j-1][ int(labels[j-1]) ] = 1
          train_step.run(feed_dict={x: batch[0], y_: yTrain, keep_prob:0.5}, session=sess)
 
-         if i%100 == 0 and i != 0:
+         if i%25 == 0 and i != 0:
             #evaluate accuracy on all training set
             batch = datasets.train.get_random_batch(100)
             labels = batch[1]
