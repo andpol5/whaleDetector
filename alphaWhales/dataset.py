@@ -90,9 +90,10 @@ class DataSet(object):
 
       for file in filenames:
          im = cv2.imread(file, flags=cv2.IMREAD_GRAYSCALE)
-         images.append(im.flatten())
+         normIm = im.astype(float)
+         normIm = (normIm/np.max(normIm))*2.0-1.0
+         images.append(normIm.flatten())
       return np.asarray(images)
-
 
 def read_data_sets(trainDir, validationDir, trainFile, validationFile):
    class DataSets(object):

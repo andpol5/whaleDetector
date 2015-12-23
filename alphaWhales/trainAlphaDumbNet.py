@@ -44,8 +44,9 @@ def doDumbNet(trainDir, valDir, trainCsv, valCsv):
       imageSize = 227 * 227
       batchSize = 10
       learningRate = 1e-5
-      f1.write('nClasses: %d, imageSize: %d, batchSize: %d, learningRate: %d\n', nClasses,
-                                                imageSize, batchSize, learningRate)
+      dropOutValue = 0.5
+      f1.write('nClasses: %d, imageSize: %d, batchSize: %d, learningRate: %e, dropOut: %f\n'
+                    % (nClasses, imageSize, batchSize, learningRate, dropOutValue))
       f1.flush()
       # The size of the images is 200x150
       x = tf.placeholder("float", shape=[None, imageSize], name="Input")
@@ -73,7 +74,7 @@ def doDumbNet(trainDir, valDir, trainCsv, valCsv):
 
       # We then convolve x_image with the weight tensor,
       # add the bias, apply the ReLU function, and finally max pool.
-      h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1)
+      h_conv1 = tf.nn.sigmoid(conv2d(x_image, W_conv1) + b_conv1)
       h_pool1 = max_pool_3x3(h_conv1, name="pool1")
 
       # SECOND CONV LAYER
@@ -82,14 +83,14 @@ def doDumbNet(trainDir, valDir, trainCsv, valCsv):
       W_conv2 = weight_variable([5, 5, d1, d2], name="Weights_conv2")
       b_conv2 = bias_variable([d2], name="biases_conv2")
 
-      h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)
+      h_conv2 = tf.nn.sigmoid(conv2d(h_pool1, W_conv2) + b_conv2)
       h_pool2 = max_pool_3x3(h_conv2, name="pool2")
 
       # THIRD CONV LAYER
       W_conv3 = weight_variable([5, 5, d2, d3], name="Weights_conv3")
       b_conv3 = bias_variable([d3], name="biases_conv3")
 
-      h_conv3 = tf.nn.relu(conv2d(h_pool2, W_conv3) + b_conv3)
+      h_conv3 = tf.nn.sigmoid(conv2d(h_pool2, W_conv3) + b_conv3)
       h_pool3 = max_pool_2x2(h_conv3, name="pool3")
       # h_pool3_slice = tf.slice(h_pool3, [0, 0, 0, 0], [50, 24, 6, 1])
       # h_pool3_img = tf.reshape(h_pool3_slice, [20, 24, 6, 1])
@@ -99,13 +100,13 @@ def doDumbNet(trainDir, valDir, trainCsv, valCsv):
       W_conv4 = weight_variable([3, 3, d3, d4], name="Weights_conv4")
       b_conv4 = bias_variable([d4], name="biases_conv4")
 
-      h_conv4 = tf.nn.relu6(conv2d(h_pool3, W_conv4) + b_conv4)
+      h_conv4 = tf.nn.sigmoid(conv2d(h_pool3, W_conv4) + b_conv4)
       h_pool4 = max_pool_2x2(h_conv4, name="pool4")
       # FIFTH CONV LAYER
       W_conv5 = weight_variable([3, 3, d4, d5], name="Weights_conv5")
       b_conv5 = bias_variable([d5], name="biases_conv5")
 
-      h_conv5 = tf.nn.relu6(conv2d(h_pool4, W_conv5) + b_conv5)
+      h_conv5 = tf.nn.sigmoid(conv2d(h_pool4, W_conv5) + b_conv5)
       h_pool5 = max_pool_2x2(h_conv5, name="pool5")
 
       # DENSELY CONNECTED LAYER
@@ -118,7 +119,7 @@ def doDumbNet(trainDir, valDir, trainCsv, valCsv):
       b_fc1 = bias_variable([fc], name="biases_fc1")
 
       h_conv5_flat = tf.reshape(h_pool5, [-1, 7 * 7 * d5])
-      h_fc1 = tf.nn.relu(tf.matmul(h_conv5_flat, W_fc1) + b_fc1)
+      h_fc1 = tf.nn.sigmoid(tf.matmul(h_conv5_flat, W_fc1) + b_fc1)
 
       # DROPOUT
       keep_prob = tf.placeholder("float")
@@ -156,7 +157,7 @@ def doDumbNet(trainDir, valDir, trainCsv, valCsv):
          yTrain = np.zeros((batchSize, nClasses))
          for j in xrange(batchSize):
             yTrain[j - 1][int(labels[j - 1])] = 1
-         train_step.run(feed_dict={x: batch[0], y_: yTrain, keep_prob: 0.5}, session=sess)
+         train_step.run(feed_dict={x: batch[0], y_: yTrain, keep_prob: dropOutValue}, session=sess)
 
          if i % 25 == 0 and i != 0:
             # evaluate accuracy on random 100 samples from train set

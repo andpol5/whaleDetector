@@ -65,8 +65,9 @@ def doAlexNet(trainDir, valDir, trainCsv, valCsv):
       imageSize = 227*227
       learningRate = 1e-6
       batchSize = 10
-      f1.write('nClasses: %d, imageSize: %d, batchSize: %d, learningRate: %d\n', nClasses,
-                                                  imageSize, batchSize, learningRate)
+      dropOutValue = 0.5
+      f1.write('nClasses: %d, imageSize: %d, batchSize: %d, learningRate: %e, dropOut: %f\n'
+                    % (nClasses, imageSize, batchSize, learningRate, dropOutValue))
 
       # The size of the images is 227x227
       x = tf.placeholder("float", shape=[None, imageSize], name="Input")
@@ -168,7 +169,7 @@ def doAlexNet(trainDir, valDir, trainCsv, valCsv):
          yTrain = np.zeros((batchSize, nClasses))
          for j in xrange(batchSize):
             yTrain[j-1][ int(labels[j-1]) ] = 1
-         train_step.run(feed_dict={x: batch[0], y_: yTrain, keep_prob:0.5}, session=sess)
+         train_step.run(feed_dict={x: batch[0], y_: yTrain, keep_prob:dropOutValue}, session=sess)
 
          if i%25 == 0 and i != 0:
             #evaluate accuracy on all training set
