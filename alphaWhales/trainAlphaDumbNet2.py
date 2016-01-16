@@ -5,6 +5,8 @@ import numpy as np
 
 import dataset
 
+np.set_printoptions(threshold=np.nan)
+
 def weight_variable(shape):
   initial = tf.truncated_normal(shape, stddev=0.1)
   return tf.Variable(initial)
@@ -22,7 +24,7 @@ def max_pool_2x2(x):
                         strides=[1, 2, 2, 1], padding='SAME')
 
 # Constants
-learningRate = 1e-4
+learningRate = 1e-3
 batchSize = 20
 dropout = 1
 
@@ -116,10 +118,13 @@ with tf.device('/cpu:0'):
         batch = datasets.train.get_sequential_batch(batchSize)
 
         if i%10 == 0:
-            train_accuracy, cross_entropyD, yD  = sess.run([accuracy, cross_entropy, y_conv],
+            train_accuracy, cross_entropyD, w5D, w6D, w7D, yD  = sess.run([accuracy, cross_entropy, W_conv5, W_fc1, W_fc2, y_conv],
                                          feed_dict={x: batch[0], y_: batch[1], keep_prob: 1})
             print("step: %d, training accuracy: %f, time: %d\n"%(i, train_accuracy, time.time() - stepStart))
-            print("train cross entropy: %f, y = %s\n"%(cross_entropyD, str(np.argmax(yD, axis=1))))
+            print("train cross entropy: %f, w_conv5 = %s\n"%(cross_entropyD, str(w5D)))
+            print("w_fc1 = %s\n"%(str(w6D)))
+            print("w_fc2 = %s\n"%(str(w7D)))
+            print("y = %s\n"%(str(np.argmax(yD, axis=1))))
             # print("validation accuracy: %g"%accuracy.eval(feed_dict={x:  validation[0], y_: validation[1], keep_prob: 1.0}))
 
         train_step.run(feed_dict={x: batch[0], y_: batch[1], keep_prob: dropout})
