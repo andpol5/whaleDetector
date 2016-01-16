@@ -30,7 +30,7 @@ def normalize(x):
     return tf.nn.local_response_normalization(x)
 
 # Constants
-starter_learning_rate = 0.01
+starter_learning_rate = 1e-4
 batchSize = 20
 dropout = 1
 
@@ -144,6 +144,8 @@ with tf.device('/cpu:0'):
     validation = datasets.validation.getAll()
     # entireTrainSet = datasets.train.getAll()
 
+    saver = tf.train.Saver()
+
     for i in range(20000):
         stepStart = time.time()
 
@@ -168,18 +170,14 @@ with tf.device('/cpu:0'):
             print("h_conv5 mean = %s\n"%(h_conv5_meanD))
             print("h_fc1 mean = %s\n"%(h_fc1_meanD))
             # print("w_fc2 mean = %s\n"%(W_fc2_meanD))
-            print("y = %s\n"%(str(np.argmax(yD, axis=1))))
+            print("y     = %s\n"%(str(np.argmax(yD, axis=1))))
             print("yReal = %s\n"%(str(np.argmax(batch[1], axis=1))))
             # print("validation accuracy: %g"%accuracy.eval(feed_dict={x:  validation[0], y_: validation[1], keep_prob: 1.0}))
 
+        if i%1000 == 0 and i != 0:
+            saver.save(sess, 'my-model-%d' % (time.time()), global_step=global_step)
 
         print('step: %d, time: %d\n' % (i, time.time() - stepStart))
 
     print("final validation accuracy: %g"%accuracy.eval(feed_dict={
         x:  validation[0], y_: validation[1], keep_prob: 1.0}))
-
-def signal_handler(signal, frame):
-        print('You pressed Ctrl+C!')
-        #   save the model
-        saver.save(sess, 'my-model-%d' % (time.time()), global_step=global_step)
-        sys.exit(0)
