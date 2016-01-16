@@ -50,7 +50,7 @@ start_time = time.time()
 ########################################
 def doAlexNet(trainDir, valDir, trainCsv, valCsv):
 
-   f1=open('log_%s_%d' % (trainDir, time.time()), 'w+')
+   f1=open('log_%d' % (time.time()), 'w+')
    f1.write('AAAAA\n')
    f1.write("Start %s\n" % time.time())
    f1.flush()
@@ -62,7 +62,7 @@ def doAlexNet(trainDir, valDir, trainCsv, valCsv):
 
       # Constants
       nClasses = 38
-      imageSize = 227*227
+      imageSize = 227
       learningRate = 1e-6
       batchSize = 10
       dropOutValue = 0.5
@@ -70,7 +70,7 @@ def doAlexNet(trainDir, valDir, trainCsv, valCsv):
                     % (nClasses, imageSize, batchSize, learningRate, dropOutValue))
 
       # The size of the images is 227x227
-      x = tf.placeholder("float", shape=[None, imageSize], name="Input")
+      x = tf.placeholder("float", shape=[None, imageSize, imageSize, 1], name="Input")
       # There are 4 classes (labels)
       y_ = tf.placeholder("float", shape=[None, nClasses], name = "Output")
 
@@ -78,14 +78,10 @@ def doAlexNet(trainDir, valDir, trainCsv, valCsv):
       w_conv1 = weight_variable([11, 11, 1, 96], name="Weights_conv1")
       b_conv1 = bias_variable([96], name="b_conv1")
 
-      # To apply the layer, we first reshape x to a 4d tensor, with the second
-      # and third dimensions corresponding to image width and height,
-      # and the final dimension corresponding to the number of color channels.
-      x_image = tf.reshape(x, [-1,227,227,1])
 
       # We then convolve x_image with the weight tensor,
       # add the bias, apply the ReLU function (repeat from step 1) and finally max pool.
-      h_conv1 = tf.nn.relu(tf.nn.conv2d(x_image, w_conv1, strides=[1, 4, 4, 1], padding='VALID') + b_conv1)
+      h_conv1 = tf.nn.relu(tf.nn.conv2d(x, w_conv1, strides=[1, 4, 4, 1], padding='VALID') + b_conv1)
       h_pool1 = max_pool_3x3(h_conv1, name="pool1")
 
       # SECOND SUBLAYER (256 features, 1 convolution)
@@ -163,25 +159,16 @@ def doAlexNet(trainDir, valDir, trainCsv, valCsv):
          step_start = time.time()
 
          batch = datasets.train.get_sequential_batch(batchSize)
-         labels = batch[1]
 
-         # Format the Y for this step
-         yTrain = np.zeros((batchSize, nClasses))
-         for j in xrange(batchSize):
-            yTrain[j-1][ int(labels[j-1]) ] = 1
-         train_step.run(feed_dict={x: batch[0], y_: yTrain, keep_prob:dropOutValue}, session=sess)
+         train_step.run(feed_dict={x: batch[0], y_: batch[1], keep_prob:dropOutValue}, session=sess)
 
          if i%25 == 0 and i != 0:
             #evaluate accuracy on all training set
             batch = datasets.train.get_random_batch(100)
-            labels = batch[1]
 
-            yTrain = np.zeros((len(batch[1]), nClasses))
-            for j in xrange(len(batch[1])):
-               yTrain[j][ int(labels[j]) ] = 1
             f1.write("step %d finished, time = %s\n" %(i, time.time() - step_start))
             acc, cross_entropyD = sess.run([accuracy, cross_entropy],
-                                                      feed_dict={x: batch[0], y_: yTrain, keep_prob: 1})
+                                                      feed_dict={x: batch[0], y_: batch[1], keep_prob: 1})
             f1.write("Cross entropy = " + str(cross_entropyD) + "\n")
             f1.write("Accuracy = " + str(acc) + "\n")
             f1.write("\n--- %s seconds ---\n\n" % (time.time() - start_time))
@@ -192,17 +179,12 @@ def doAlexNet(trainDir, valDir, trainCsv, valCsv):
          f1.flush()
 
 
-      saver.save(sess, 'my-model-%s-%d'%(trainDir, start_time), global_step=10000)
+      saver.save(sess, 'my-model-%d'%(start_time), global_step=10000)
       # Evaluate the prediction
       test = datasets.validation.getAll()
-      testLabels = test[1]
-
-      yTest = np.zeros((len(test[1]), nClasses))
-      for j in xrange(len(test[1])):
-         yTest[j][ int(testLabels[j]) ] = 1
 
       acc, y_convD, correct_predictionD = sess.run([accuracy, y_conv, correct_prediction],
-                                                   feed_dict={x: test[0], y_: yTest, keep_prob: 1.0})
+                                                   feed_dict={x: test[0], y_: test[1], keep_prob: 1.0})
       f1.write("Accuracy = " + str(acc) + "\n")
       f1.write("Correct prediction %d\n" % (sum(correct_predictionD)))
       f1.write("y %s\n" % str(test[1]))
@@ -211,5 +193,4 @@ def doAlexNet(trainDir, valDir, trainCsv, valCsv):
       f1.flush()
       f1.close()
 
-doAlexNet('batch1', 'batch2', 'batch1/train.csv', 'batch2/validation.csv')
-doAlexNet('batch2', 'batch1', 'batch2/train.csv', 'batch1/validation.csv')
+doAlexNet('train/train', 'train/validation', 'whales.csv', 'whales.csv')

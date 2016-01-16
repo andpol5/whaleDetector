@@ -28,7 +28,7 @@ def max_pool_2x2(x, name):
 
 
 def doDumbNet(trainDir, valDir, trainCsv, valCsv):
-   f1 = open('log_%s_%d' % (trainDir, time.time()), 'w+')
+   f1 = open('log_%d' % (time.time()), 'w+')
    f1.write('AAAAA\n')
    f1.write("Start %s\n" % time.time())
    f1.flush()
@@ -41,15 +41,15 @@ def doDumbNet(trainDir, valDir, trainCsv, valCsv):
 
       # Constants
       nClasses = 38
-      imageSize = 227 * 227
+      imageSize = 256
       batchSize = 10
-      learningRate = 1e-5
+      learningRate = 1e-4
       dropOutValue = 0.5
       f1.write('nClasses: %d, imageSize: %d, batchSize: %d, learningRate: %e, dropOut: %f\n'
                     % (nClasses, imageSize, batchSize, learningRate, dropOutValue))
       f1.flush()
       # The size of the images is 200x150
-      x = tf.placeholder("float", shape=[None, imageSize], name="Input")
+      x = tf.placeholder("float", shape=[None, imageSize, imageSize, 1], name="Input")
       # There are 4 classes (labels)
       y_ = tf.placeholder("float", shape=[None, nClasses], name="Output")
 
@@ -57,25 +57,20 @@ def doDumbNet(trainDir, valDir, trainCsv, valCsv):
       # The first two dimensions are the patch size, the next is the number of input channels,
       # and the last is the number of output channels.
       # We will also have a bias vector with a component for each output channel.
-      d1 = 36
+      d1 = 32
       d2 = 32
       d3 = 64
       d4 = 64
       d5 = 64
       fc = 300
 
-      W_conv1 = weight_variable([7, 7, 1, d1], name="Weights_conv1")
+      W_conv1 = weight_variable([5, 5, 1, d1], name="Weights_conv1")
       b_conv1 = bias_variable([d1], name="b_conv1")
-
-      # To apply the layer, we first reshape x to a 4d tensor, with the second
-      # and third dimensions corresponding to image width and height,
-      # and the final dimension corresponding to the number of color channels.
-      x_image = tf.reshape(x, [-1, 227, 227, 1])
 
       # We then convolve x_image with the weight tensor,
       # add the bias, apply the ReLU function, and finally max pool.
-      h_conv1 = tf.nn.sigmoid(conv2d(x_image, W_conv1) + b_conv1)
-      h_pool1 = max_pool_3x3(h_conv1, name="pool1")
+      h_conv1 = tf.nn.sigmoid(conv2d(x, W_conv1) + b_conv1)
+      h_pool1 = max_pool_2x2(h_conv1, name="pool1")
 
       # SECOND CONV LAYER
       # In order to build a deep network, we stack several layers of this type.
@@ -84,7 +79,7 @@ def doDumbNet(trainDir, valDir, trainCsv, valCsv):
       b_conv2 = bias_variable([d2], name="biases_conv2")
 
       h_conv2 = tf.nn.sigmoid(conv2d(h_pool1, W_conv2) + b_conv2)
-      h_pool2 = max_pool_3x3(h_conv2, name="pool2")
+      h_pool2 = max_pool_2x2(h_conv2, name="pool2")
 
       # THIRD CONV LAYER
       W_conv3 = weight_variable([5, 5, d2, d3], name="Weights_conv3")
@@ -116,10 +111,10 @@ def doDumbNet(trainDir, valDir, trainCsv, valCsv):
       # We reshape the tensor from the pooling layer into a batch of vectors, multiply by a weight
       # matrix, add a bias, and apply a ReLU.
 
-      W_fc1 = weight_variable([7 * 7 * d5, fc], name="Weights_fc1")
+      W_fc1 = weight_variable([8 * 8 * d5, fc], name="Weights_fc1")
       b_fc1 = bias_variable([fc], name="biases_fc1")
 
-      h_conv5_flat = tf.reshape(h_pool5, [-1, 7 * 7 * d5])
+      h_conv5_flat = tf.reshape(h_pool5, [-1, 8 * 8 * d5])
       h_fc1 = tf.nn.sigmoid(tf.matmul(h_conv5_flat, W_fc1) + b_fc1)
 
       # DROPOUT
@@ -150,34 +145,23 @@ def doDumbNet(trainDir, valDir, trainCsv, valCsv):
       # saver.restore(sess, 'my-model-batch1-10000')
       # utility = utilities.Utility(datasets, sess, nClasses, x, y_, keep_prob)
 
-      for i in xrange(1500):
+      for i in xrange(5000):
          step_start = time.time()
 
          batch = datasets.train.get_sequential_batch(batchSize)
-         labels = batch[1]
+         train_step.run(feed_dict={x: batch[0], y_: batch[1], keep_prob: 1}, session=sess)
 
-         # Format the Y for this step
-         yTrain = np.zeros((batchSize, nClasses))
-         for j in xrange(batchSize):
-            yTrain[j - 1][int(labels[j - 1])] = 1
-         train_step.run(feed_dict={x: batch[0], y_: yTrain, keep_prob: dropOutValue}, session=sess)
-
-         if i % 25 == 0 and i != 0:
+         if i % 25 == 0:
             # evaluate accuracy on random 100 samples from train set
             batch = datasets.train.get_random_batch(100)
-            labels = batch[1]
-
-            # Format the Y for this step
-            yTrain = np.zeros((len(batch[1]), nClasses))
-            for j in xrange(len(batch[1])):
-               yTrain[j][int(labels[j])] = 1
             f1.write("step %d finished, time = %s\n" % (i, time.time() - step_start))
             # acc, cross_entropyD, summary_str = sess.run([accuracy, cross_entropy, summary_op],
             #                                feed_dict={x: batch[0], y_: yTrain, keep_prob: 1})
-            acc, cross_entropyD = sess.run([accuracy, cross_entropy],
-                                           feed_dict={x: batch[0], y_: yTrain, keep_prob: 1})
+            acc, cross_entropyD, yD = sess.run([accuracy, cross_entropy, y_conv],
+                                           feed_dict={x: batch[0], y_: batch[1], keep_prob: 1})
             f1.write("Cross entropy = " + str(cross_entropyD) + "\n")
             f1.write("Accuracy = " + str(acc) + "\n")
+            f1.write("Y = " + str(np.argmax(yD, axis=1)) + "\n")
             f1.write("\n--- %s seconds ---\n\n" % (time.time() - start_time))
             f1.flush()
             # summary_writer.add_summary(summary_str, i)
@@ -186,16 +170,10 @@ def doDumbNet(trainDir, valDir, trainCsv, valCsv):
          f1.write("\nstep %d finished, %d seconds \n" % (i, time.time() - step_start))
          f1.flush()
 
-   saver.save(sess, 'my-model-%s-%d' % (trainDir, time.time()), global_step=10000)  # Evaluate the prediction
+   saver.save(sess, 'my-model-%d' % (time.time()), global_step=10000)  # Evaluate the prediction
    test = datasets.validation.getAll()
-   testLabels = test[1]
-
-   yTest = np.zeros((len(test[1]), nClasses))
-   for j in xrange(len(test[1])):
-      yTest[j][int(testLabels[j])] = 1
-
    acc, y_convD, correct_predictionD = sess.run([accuracy, y_conv, correct_prediction],
-                                                feed_dict={x: test[0], y_: yTest, keep_prob: 1.0})
+                                                feed_dict={x: test[0], y_: test[1], keep_prob: 1.0})
    f1.write("Accuracy = " + str(acc) + "\n")
    f1.write("Correct prediction %d\n" % (sum(correct_predictionD)))
    f1.write("y %s\n" % str(test[1]))
@@ -206,5 +184,4 @@ def doDumbNet(trainDir, valDir, trainCsv, valCsv):
 
 
 start_time = time.time()
-doDumbNet('batch1', 'batch2', 'batch1/train.csv', 'batch2/validation.csv')
-doDumbNet('batch2', 'batch1', 'batch2/train.csv', 'batch1/validation.csv')
+doDumbNet('train/train', 'train/validation', 'whales.csv', 'whales.csv')
