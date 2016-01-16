@@ -118,12 +118,12 @@ with tf.device('/cpu:0'):
         batch = datasets.train.get_sequential_batch(batchSize)
 
         if i%10 == 0:
-            train_accuracy, cross_entropyD, w5D, w6D, w7D, yD  = sess.run([accuracy, cross_entropy, W_conv5, W_fc1, W_fc2, y_conv],
+            train_accuracy, cross_entropyD, W_fc2D, yD  = sess.run([accuracy, cross_entropy,W_fc2, y_conv],
                                          feed_dict={x: batch[0], y_: batch[1], keep_prob: 1})
             print("step: %d, training accuracy: %f, time: %d\n"%(i, train_accuracy, time.time() - stepStart))
-            print("train cross entropy: %f, w_conv5 = %s\n"%(cross_entropyD, str(w5D)))
-            print("w_fc1 = %s\n"%(str(w6D)))
-            print("w_fc2 = %s\n"%(str(w7D)))
+            print("train cross entropy: %f\n"%(cross_entropyD))
+            print("w_fc2 mean = %s\n"%(np.mean(np.abs(W_fc2D),axis=0)))
+            print("w_fc2 sd = %s\n"%(np.std(np.abs(W_fc2D),axis=0)))
             print("y = %s\n"%(str(np.argmax(yD, axis=1))))
             # print("validation accuracy: %g"%accuracy.eval(feed_dict={x:  validation[0], y_: validation[1], keep_prob: 1.0}))
 
