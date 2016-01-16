@@ -1,4 +1,6 @@
 import time
+import signal
+import sys
 
 import tensorflow as tf
 import numpy as np
@@ -8,20 +10,18 @@ import dataset
 np.set_printoptions(threshold=np.nan)
 
 def weight_variable(shape):
-  initial = tf.truncated_normal(shape, stddev=0.1)
+  initial = tf.truncated_normal(shape, mean=0.001, stddev=0.3)
   return tf.Variable(initial)
 
 def bias_variable(shape):
   initial = tf.constant(0.1, shape=shape)
   return tf.Variable(initial)
 
-
 def conv2d(x, W):
   return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
 
 def max_pool_2x2(x):
-  return tf.nn.max_pool(x, ksize=[1, 2, 2, 1],
-                        strides=[1, 2, 2, 1], padding='SAME')
+  return tf.nn.max_pool(x, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
 
 def activation(x):
     return tf.nn.relu(x)
@@ -30,8 +30,8 @@ def normalize(x):
     return tf.nn.local_response_normalization(x)
 
 # Constants
-learningRate = 1e-2
-batchSize = 10
+starter_learning_rate = 0.01
+batchSize = 20
 dropout = 1
 
 nClasses = 38
@@ -40,12 +40,13 @@ imH = 256
 d1 = 32
 d2 = 32
 d3 = 32
-d4 = 32
-d5 = 32
+d4 = 64
+d5 = 64
 fc1 = 1024
 
 # Force CPU only mode
 with tf.device('/cpu:0'):
+    # create session
     sess = tf.InteractiveSession()
 
     x = tf.placeholder("float", shape=[None,imW,imH,1])
@@ -97,16 +98,24 @@ with tf.device('/cpu:0'):
 
     # Output layer
     keep_prob = tf.placeholder("float")
-    h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
+    # h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
     W_fc2 = weight_variable([fc1, nClasses])
     b_fc2 = bias_variable([nClasses])
 
-    y_conv=tf.nn.softmax(tf.matmul(h_fc1_drop, W_fc2) + b_fc2)
+    y_conv=tf.nn.softmax(tf.matmul(h_fc1, W_fc2) + b_fc2)
 
     # Cost function
     cross_entropy =  -tf.reduce_sum(y_ * tf.log(tf.clip_by_value(y_conv, 1e-15, 1.0)))
+
+    # Exponentially decaying learning rate
+    global_step = tf.Variable(0, trainable=False)
+    learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step,
+                                           100000, 0.96, staircase=True)
+    # Passing global_step to minimize() will increment it at each step.
+
     # Optimizer
-    train_step = tf.train.AdamOptimizer(learningRate).minimize(cross_entropy)
+    train_step = tf.train.AdamOptimizer(learning_rate).minimize(cross_entropy, global_step=global_step)
+
     # Accuracy
     correct_prediction = tf.equal(tf.argmax(y_conv,1), tf.argmax(y_,1))
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
@@ -133,6 +142,7 @@ with tf.device('/cpu:0'):
 
     # validation dateset
     validation = datasets.validation.getAll()
+    # entireTrainSet = datasets.train.getAll()
 
     for i in range(20000):
         stepStart = time.time()
@@ -165,5 +175,11 @@ with tf.device('/cpu:0'):
 
         print('step: %d, time: %d\n' % (i, time.time() - stepStart))
 
-    print("finale validation accuracy: %g"%accuracy.eval(feed_dict={
+    print("final validation accuracy: %g"%accuracy.eval(feed_dict={
         x:  validation[0], y_: validation[1], keep_prob: 1.0}))
+
+def signal_handler(signal, frame):
+        print('You pressed Ctrl+C!')
+        #   save the model
+        saver.save(sess, 'my-model-%d' % (time.time()), global_step=global_step)
+        sys.exit(0)
