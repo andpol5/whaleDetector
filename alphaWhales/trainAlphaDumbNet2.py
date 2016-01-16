@@ -26,6 +26,9 @@ def max_pool_2x2(x):
 def activation(x):
     return tf.nn.relu(x)
 
+def normalize(x):
+    return tf.nn.local_response_normalization(x)
+
 # Constants
 learningRate = 1e-2
 batchSize = 10
@@ -60,7 +63,7 @@ with tf.device('/cpu:0'):
     W_conv2 = weight_variable([5, 5, d1, d2])
     b_conv2 = bias_variable([d2])
 
-    h_conv2 = activation(conv2d(tf.nn.local_response_normalization(h_pool1), W_conv2) + b_conv2)
+    h_conv2 = activation(conv2d(normalize(h_pool1), W_conv2) + b_conv2)
     h_pool2 = max_pool_2x2(h_conv2) # size 64*64*d2
 
 
@@ -68,28 +71,28 @@ with tf.device('/cpu:0'):
     W_conv3 = weight_variable([5, 5, d2, d3])
     b_conv3 = bias_variable([d3])
 
-    h_conv3 = activation(conv2d(tf.nn.local_response_normalization(h_pool2), W_conv3) + b_conv3)
+    h_conv3 = activation(conv2d(normalize(h_pool2), W_conv3) + b_conv3)
     h_pool3 = max_pool_2x2(h_conv3) # size 32*32*d3
 
     # Forth convolution layer
     W_conv4 = weight_variable([5, 5, d3, d4])
     b_conv4 = bias_variable([d4])
 
-    h_conv4 = activation(conv2d(tf.nn.local_response_normalization(h_pool3), W_conv4) + b_conv4)
+    h_conv4 = activation(conv2d(normalize(h_pool3), W_conv4) + b_conv4)
     h_pool4 = max_pool_2x2(h_conv4) # size 16*16*d4
 
     # Fifth convolution layer
     W_conv5 = weight_variable([5, 5, d4, d5])
     b_conv5 = bias_variable([d5])
 
-    h_conv5 = activation(conv2d(tf.nn.local_response_normalization(h_pool4), W_conv5) + b_conv5)
+    h_conv5 = activation(conv2d(normalize(h_pool4), W_conv5) + b_conv5)
     h_pool5 = max_pool_2x2(h_conv5) # size 8*8*d5
 
     # Fully connected layer
     W_fc1 = weight_variable([8 * 8 * d5, fc1])
     b_fc1 = bias_variable([fc1])
 
-    h_pool5_flat = tf.reshape(tf.nn.local_response_normalization(h_pool5), [-1, 8*8*d5])
+    h_pool5_flat = tf.reshape(normalize(h_pool5), [-1, 8*8*d5])
     h_fc1 = activation(tf.matmul(h_pool5_flat, W_fc1) + b_fc1)
 
     # Output layer
