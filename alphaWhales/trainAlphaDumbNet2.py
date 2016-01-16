@@ -23,6 +23,9 @@ def max_pool_2x2(x):
   return tf.nn.max_pool(x, ksize=[1, 2, 2, 1],
                         strides=[1, 2, 2, 1], padding='SAME')
 
+def activation(x):
+    return tf.nn.relu(x)
+
 # Constants
 learningRate = 1e-2
 batchSize = 10
@@ -49,7 +52,7 @@ with tf.device('/cpu:0'):
     W_conv1 = weight_variable([5, 5, 1, d1])
     b_conv1 = bias_variable([d1])
 
-    h_conv1 = tf.nn.relu(conv2d(x, W_conv1) + b_conv1)
+    h_conv1 = activation(conv2d(x, W_conv1) + b_conv1)
     h_pool1 = max_pool_2x2(h_conv1) # size 128*128*d1
 
 
@@ -57,7 +60,7 @@ with tf.device('/cpu:0'):
     W_conv2 = weight_variable([5, 5, d1, d2])
     b_conv2 = bias_variable([d2])
 
-    h_conv2 = tf.nn.relu(conv2d(tf.nn.local_response_normalization(h_pool1), W_conv2) + b_conv2)
+    h_conv2 = activation(conv2d(tf.nn.local_response_normalization(h_pool1), W_conv2) + b_conv2)
     h_pool2 = max_pool_2x2(h_conv2) # size 64*64*d2
 
 
@@ -65,21 +68,21 @@ with tf.device('/cpu:0'):
     W_conv3 = weight_variable([5, 5, d2, d3])
     b_conv3 = bias_variable([d3])
 
-    h_conv3 = tf.nn.relu(conv2d(tf.nn.local_response_normalization(h_pool2), W_conv3) + b_conv3)
+    h_conv3 = activation(conv2d(tf.nn.local_response_normalization(h_pool2), W_conv3) + b_conv3)
     h_pool3 = max_pool_2x2(h_conv3) # size 32*32*d3
 
     # Forth convolution layer
     W_conv4 = weight_variable([5, 5, d3, d4])
     b_conv4 = bias_variable([d4])
 
-    h_conv4 = tf.nn.relu(conv2d(tf.nn.local_response_normalization(h_pool3), W_conv4) + b_conv4)
+    h_conv4 = activation(conv2d(tf.nn.local_response_normalization(h_pool3), W_conv4) + b_conv4)
     h_pool4 = max_pool_2x2(h_conv4) # size 16*16*d4
 
     # Fifth convolution layer
     W_conv5 = weight_variable([5, 5, d4, d5])
     b_conv5 = bias_variable([d5])
 
-    h_conv5 = tf.nn.relu(conv2d(tf.nn.local_response_normalization(h_pool4), W_conv5) + b_conv5)
+    h_conv5 = activation(conv2d(tf.nn.local_response_normalization(h_pool4), W_conv5) + b_conv5)
     h_pool5 = max_pool_2x2(h_conv5) # size 8*8*d5
 
     # Fully connected layer
@@ -87,7 +90,7 @@ with tf.device('/cpu:0'):
     b_fc1 = bias_variable([fc1])
 
     h_pool5_flat = tf.reshape(tf.nn.local_response_normalization(h_pool5), [-1, 8*8*d5])
-    h_fc1 = tf.nn.relu(tf.matmul(h_pool5_flat, W_fc1) + b_fc1)
+    h_fc1 = activation(tf.matmul(h_pool5_flat, W_fc1) + b_fc1)
 
     # Output layer
     keep_prob = tf.placeholder("float")
