@@ -24,7 +24,7 @@ def svd_whiten(X):
 
 class DataSet(object):
 
-   def __init__(self, inputDir, labelsFile):
+   def __init__(self, inputDir, labelsFile, nClasses = 38):
       self.indexInEpoch = 0
       self.epochsCompleted = 0
 
@@ -62,6 +62,11 @@ class DataSet(object):
          i += 1
       self.labels = np.array([l[x - 1] for x in self.origLabels])
 
+      # Format the Y for this step
+      self.yTrain = np.zeros((len(self.labels), nClasses))
+      for j in xrange(len(self.labels)):
+         self.yTrain[j - 1][int(self.labels[j - 1])] = 1
+
    @property
    def num_examples(self):
       return len(self.images)
@@ -71,11 +76,11 @@ class DataSet(object):
       return self.epochsCompleted
 
    def getAll(self):
-         return self.read_images([os.path.join(self.inputDir, x) for x in self.images]), self.labels
+         return self.read_images([os.path.join(self.inputDir, x) for x in self.images]), self.yTrain
 
    def get_random_batch(self, batchSize):
       randInd = random.permutation(len(self.images))[:batchSize]
-      return self.read_images([os.path.join(self.inputDir, x) for x in self.images[randInd]]), self.labels[randInd]
+      return self.read_images([os.path.join(self.inputDir, x) for x in self.images[randInd]]), self.yTrain[randInd]
 
    def get_sequential_batch(self, batchSize):
       start = self.indexInEpoch
@@ -93,7 +98,7 @@ class DataSet(object):
          self.indexInEpoch = batchSize
          assert batchSize <= self.num_examples
       end = self.indexInEpoch
-      return self.read_images([os.path.join(self.inputDir, x) for x in self.images[start:end]]), self.labels[start:end]
+      return self.read_images([os.path.join(self.inputDir, x) for x in self.images[start:end]]), self.yTrain[start:end]
 
    def read_images(self, filenames):
       images = []
@@ -101,10 +106,9 @@ class DataSet(object):
       for file in filenames:
          im = cv2.imread(file, flags=cv2.IMREAD_GRAYSCALE)
          normIm = im.astype(float)
-         normIm = (normIm/np.max(normIm))*2.0-1.0
-         whitened = svd_whiten(normIm)
-        #  cv2.imwrite('tmp.jpg', whitened)
-         images.append(normIm.flatten())
+
+         normIm = (normIm/255)
+         images.append(np.reshape(normIm, (normIm.shape[0], normIm.shape[1], 1)))
       return np.asarray(images)
 
 def read_data_sets(trainDir, validationDir, trainFile, validationFile):
