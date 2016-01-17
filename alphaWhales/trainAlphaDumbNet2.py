@@ -37,7 +37,8 @@ def normalize(x):
 
 # Constants
 learningRate = 1e-4
-batchSize = 10
+starter_learning_rate = 1e-5
+batchSize = 30
 dropout = 1
 
 nClasses = 38
