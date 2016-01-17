@@ -8,6 +8,12 @@ import numpy as np
 import dataset
 
 np.set_printoptions(threshold=np.nan)
+f1 = open('log_%d' % (time.time()), 'w+')
+
+def log(str):
+    f1.write(str)
+    f1.flush()
+    print(str)
 
 def weight_variable(shape):
   initial = tf.truncated_normal(shape, mean=0.001, stddev=0.3)
@@ -30,22 +36,27 @@ def normalize(x):
     return tf.nn.local_response_normalization(x)
 
 # Constants
-starter_learning_rate = 1e-4
-batchSize = 20
+learningRate = 1e-4
+batchSize = 10
 dropout = 1
 
 nClasses = 38
 imW = 256
 imH = 256
 d1 = 32
-d2 = 32
-d3 = 32
-d4 = 64
-d5 = 64
-fc1 = 1024
+d2 = 64
+d3 = 128
+d4 = 256
+d5 = 512
+fc1 = 2048
+conv = 3
+momentum = 0.9
 
 # Force CPU only mode
 with tf.device('/cpu:0'):
+    log('nClasses: %d, imageSize: %d, batchSize: %d, learningRate: %e, dropOut: %f, filtersize: %d\n'
+                    % (nClasses, imW, batchSize, learningRate, dropout, conv))
+
     # create session
     sess = tf.InteractiveSession()
 
@@ -53,7 +64,7 @@ with tf.device('/cpu:0'):
     y_ = tf.placeholder("float", shape=[None, nClasses])
 
     # First convolution layer with pooling
-    W_conv1 = weight_variable([5, 5, 1, d1])
+    W_conv1 = weight_variable([conv, conv, 1, d1])
     b_conv1 = bias_variable([d1])
 
     h_conv1 = activation(conv2d(x, W_conv1) + b_conv1)
@@ -61,7 +72,7 @@ with tf.device('/cpu:0'):
 
 
     # Second convolution layer with pooling
-    W_conv2 = weight_variable([5, 5, d1, d2])
+    W_conv2 = weight_variable([conv, conv, d1, d2])
     b_conv2 = bias_variable([d2])
 
     h_conv2 = activation(conv2d(normalize(h_pool1), W_conv2) + b_conv2)
@@ -69,21 +80,21 @@ with tf.device('/cpu:0'):
 
 
     # Third convolution layer
-    W_conv3 = weight_variable([5, 5, d2, d3])
+    W_conv3 = weight_variable([conv, conv, d2, d3])
     b_conv3 = bias_variable([d3])
 
     h_conv3 = activation(conv2d(normalize(h_pool2), W_conv3) + b_conv3)
     h_pool3 = max_pool_2x2(h_conv3) # size 32*32*d3
 
     # Forth convolution layer
-    W_conv4 = weight_variable([5, 5, d3, d4])
+    W_conv4 = weight_variable([conv, conv, d3, d4])
     b_conv4 = bias_variable([d4])
 
     h_conv4 = activation(conv2d(normalize(h_pool3), W_conv4) + b_conv4)
     h_pool4 = max_pool_2x2(h_conv4) # size 16*16*d4
 
     # Fifth convolution layer
-    W_conv5 = weight_variable([5, 5, d4, d5])
+    W_conv5 = weight_variable([conv, conv, d4, d5])
     b_conv5 = bias_variable([d5])
 
     h_conv5 = activation(conv2d(normalize(h_pool4), W_conv5) + b_conv5)
@@ -98,24 +109,24 @@ with tf.device('/cpu:0'):
 
     # Output layer
     keep_prob = tf.placeholder("float")
-    # h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
+    h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
     W_fc2 = weight_variable([fc1, nClasses])
     b_fc2 = bias_variable([nClasses])
 
-    y_conv=tf.nn.softmax(tf.matmul(h_fc1, W_fc2) + b_fc2)
+    y_conv=tf.nn.softmax(tf.matmul(h_fc1_drop, W_fc2) + b_fc2)
 
     # Cost function
     cross_entropy =  -tf.reduce_sum(y_ * tf.log(tf.clip_by_value(y_conv, 1e-15, 1.0)))
 
     # Exponentially decaying learning rate
-    global_step = tf.Variable(0, trainable=False)
-    learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step,
-                                           100000, 0.96, staircase=True)
+    # global_step = tf.Variable(0, trainable=False)
+    # learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step,
+    #                                        100000, 0.96, staircase=True)
     # Passing global_step to minimize() will increment it at each step.
 
     # Optimizer
-    train_step = tf.train.AdamOptimizer(learning_rate).minimize(cross_entropy, global_step=global_step)
-
+    learningRateVar = tf.placeholder("float")
+    train_step = tf.train.MomentumOptimizer(learningRateVar, momentum=momentum).minimize(cross_entropy)
     # Accuracy
     correct_prediction = tf.equal(tf.argmax(y_conv,1), tf.argmax(y_,1))
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
@@ -145,13 +156,15 @@ with tf.device('/cpu:0'):
     # entireTrainSet = datasets.train.getAll()
 
     saver = tf.train.Saver()
+    # saver.restore(sess, 'my-model-1453043160-500')
 
     for i in range(20000):
         stepStart = time.time()
 
         batch = datasets.train.get_sequential_batch(batchSize)
-        train_step.run(feed_dict={x: batch[0], y_: batch[1], keep_prob: dropout})
-        if i%50 == 0:
+        train_step.run(feed_dict={x: batch[0], y_: batch[1], keep_prob: dropout,
+                                  learningRateVar: learningRate})
+        if i%25 == 0:
             train_accuracy, cross_entropyD, \
             h_conv1_meanD, h_conv2_meanD, h_conv3_meanD, h_conv4_meanD, h_conv5_meanD,\
             h_fc1_meanD, W_fc2_meanD,\
@@ -160,24 +173,25 @@ with tf.device('/cpu:0'):
                         h_conv1_mean, h_conv2_mean, h_conv3_mean, h_conv4_mean, h_conv5_mean,
                         h_fc1_mean, W_fc2_mean,
                         y_conv],
-                        feed_dict={x: batch[0], y_: batch[1], keep_prob: 1})
-            print("step: %d, training accuracy: %f, time: %d\n"%(i, train_accuracy, time.time() - stepStart))
-            print("train cross entropy: %f\n"%(cross_entropyD))
-            print("h_conv1 mean = %s\n"%(h_conv1_meanD))
-            print("h_conv2 mean = %s\n"%(h_conv2_meanD))
-            print("h_conv3 mean = %s\n"%(h_conv3_meanD))
-            print("h_conv4 mean = %s\n"%(h_conv4_meanD))
-            print("h_conv5 mean = %s\n"%(h_conv5_meanD))
-            print("h_fc1 mean = %s\n"%(h_fc1_meanD))
-            # print("w_fc2 mean = %s\n"%(W_fc2_meanD))
-            print("y     = %s\n"%(str(np.argmax(yD, axis=1))))
-            print("yReal = %s\n"%(str(np.argmax(batch[1], axis=1))))
-            # print("validation accuracy: %g"%accuracy.eval(feed_dict={x:  validation[0], y_: validation[1], keep_prob: 1.0}))
+                        feed_dict={x: batch[0], y_: batch[1], keep_prob: 1, learningRateVar: 0.01})
+            log("step: %d, training accuracy: %f, time: %d\n"%(i, train_accuracy, time.time() - stepStart))
+            log("train cross entropy: %f\n"%(cross_entropyD))
+            log("h_conv1 mean = %s\n"%(h_conv1_meanD))
+            log("h_conv2 mean = %s\n"%(h_conv2_meanD))
+            log("h_conv3 mean = %s\n"%(h_conv3_meanD))
+            log("h_conv4 mean = %s\n"%(h_conv4_meanD))
+            log("h_conv5 mean = %s\n"%(h_conv5_meanD))
+            log("h_fc1 mean = %s\n"%(h_fc1_meanD))
+            # log("w_fc2 mean = %s\n"%(W_fc2_meanD))
+            log("yP = %s\n"%(str(np.argmax(yD, axis=1))))
+            log("yR = %s\n"%(str(np.argmax(batch[1], axis=1))))
+            # log("validation accuracy: %g"%accuracy.eval(feed_dict={x:  validation[0], y_: validation[1], keep_prob: 1.0}))
 
-        if i%1000 == 0 and i != 0:
-            saver.save(sess, 'my-model-%d' % (time.time()), global_step=global_step)
+        if i%500 == 0 and i != 0:
+            saver.save(sess, 'my-model-%d' % (time.time()), global_step=i)
+        log('step: %d, time: %d\n' % (i, time.time() - stepStart))
 
-        print('step: %d, time: %d\n' % (i, time.time() - stepStart))
+    log("finale validation accuracy: %g"%accuracy.eval(feed_dict={
+        x:  validation[0], y_: validation[1], keep_prob: 1.0, learningRateVar:0.01}))
 
-    print("final validation accuracy: %g"%accuracy.eval(feed_dict={
-        x:  validation[0], y_: validation[1], keep_prob: 1.0}))
+f1.close()
