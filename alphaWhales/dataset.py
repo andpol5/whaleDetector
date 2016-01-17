@@ -31,41 +31,33 @@ class DataSet(object):
       self.inputDir = inputDir
       output = np.genfromtxt(labelsFile, skip_header=1, dtype=[('image', 'S13'), ('label', 'S11')], delimiter=',')
 
-      labels = [x[1] for x in output]
-
-      self.numberOfClasses = len(set(labels))
-      self.filenames = []
+      self.images = []
 
       for file in os.listdir(inputDir):
          if (file.endswith('.jpg')):
-            self.filenames.append(file)
+            self.images.append(file)
 
-      self.filenames = np.array(self.filenames)
-      self.labelsDict = {re.search("w_(\\w+)\.jpg", x[0]).group(1): int(re.search("whale_(\\d+)", x[1]).group(1))
-                         for x in output}
+      self.allImages = [x[0] for x in output]
+      self.allLabels = [int(re.search("whale_(\\d+)", x[1]).group(1)) for x in output]
 
-      # to provide default values
-      self.labelsDict = defaultdict(lambda: 0, self.labelsDict)
+      # sorted list of unique whale ids
+      self.classes = sorted(set(self.allLabels))
+      self.numberOfClasses = len(set(self.classes))
+      assert self.numberOfClasses == 38
 
-      self.examples = [re.search("w_(\\w+).jpg", x).group(1) for x in self.filenames]
-      self.allLabels = [self.labelsDict[x] for x in self.examples]
-      self.allLabels = np.array(self.allLabels)
-
-      self.imagesIds = np.array(self.examples)
-      self.images = self.filenames[self.allLabels > 0]
-      self.origLabels = self.allLabels[self.allLabels > 0]
-
-      l = np.zeros(max(self.origLabels))
-      i = 0
-      for k in sorted(set(self.origLabels)):
-         l[k - 1] = i
-         i += 1
-      self.labels = np.array([l[x - 1] for x in self.origLabels])
+      self.labels = []
+      for file in self.images:
+         ind = self.allImages.index(file)
+         cl = self.allLabels[ind]
+         # assign a class from 0 to 37
+         newClass = self.classes.index(cl)
+         self.labels.append(newClass)
 
       # Format the Y for this step
       self.yTrain = np.zeros((len(self.labels), nClasses))
       for j in xrange(len(self.labels)):
-         self.yTrain[j - 1][int(self.labels[j - 1])] = 1
+         self.yTrain[j][self.labels[j]] = 1
+      self.images = np.array(self.images)
 
    @property
    def num_examples(self):
@@ -98,7 +90,7 @@ class DataSet(object):
          self.indexInEpoch = batchSize
          assert batchSize <= self.num_examples
       end = self.indexInEpoch
-      return self.read_images([os.path.join(self.inputDir, x) for x in self.images[start:end]]), self.yTrain[start:end]
+      return self.read_images([os.path.join(self.inputDir, x) for x in self.images[start:end]]), self.yTrain[start:end], self.images[start:end]
 
    def read_images(self, filenames):
       images = []
