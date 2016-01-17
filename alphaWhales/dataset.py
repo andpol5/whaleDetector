@@ -92,7 +92,7 @@ class DataSet(object):
          perm = np.arange(self.num_examples)
          np.random.shuffle(perm)
          self.images = self.images[perm]
-         self.labels = self.labels[perm]
+         self.yTrain = self.yTrain[perm]
          # Start next epoch
          start = 0
          self.indexInEpoch = batchSize
@@ -108,6 +108,7 @@ class DataSet(object):
          normIm = im.astype(float)
 
          normIm = (normIm/255)
+         # normIm = cv2.resize(normIm, (227,227))
          images.append(np.reshape(normIm, (normIm.shape[0], normIm.shape[1], 1)))
       return np.asarray(images)
 
