@@ -38,7 +38,7 @@ def normalize(x):
 # Constants
 learningRate = 1e-4
 starter_learning_rate = 1e-5
-batchSize = 30
+batchSize = 20
 dropout = 1
 
 nClasses = 38
@@ -120,14 +120,12 @@ with tf.device('/cpu:0'):
     cross_entropy =  -tf.reduce_sum(y_ * tf.log(tf.clip_by_value(y_conv, 1e-15, 1.0)))
 
     # Exponentially decaying learning rate
-    # global_step = tf.Variable(0, trainable=False)
-    # learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step,
-    #                                        100000, 0.96, staircase=True)
+    global_step = tf.Variable(0, trainable=False)
+    learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step, 100, 0.98, staircase=True)
     # Passing global_step to minimize() will increment it at each step.
 
     # Optimizer
-    learningRateVar = tf.placeholder("float")
-    train_step = tf.train.MomentumOptimizer(learningRateVar, momentum=momentum).minimize(cross_entropy)
+    train_step = tf.train.AdamOptimizer(learning_rate).minimize(cross_entropy)
     # Accuracy
     correct_prediction = tf.equal(tf.argmax(y_conv,1), tf.argmax(y_,1))
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
@@ -157,14 +155,14 @@ with tf.device('/cpu:0'):
     # entireTrainSet = datasets.train.getAll()
 
     saver = tf.train.Saver()
-    # saver.restore(sess, 'my-model-1453043160-500')
+    # saver.restore(sess, 'my-model-1453059927-500')
 
     for i in range(20000):
         stepStart = time.time()
 
         batch = datasets.train.get_sequential_batch(batchSize)
         train_step.run(feed_dict={x: batch[0], y_: batch[1], keep_prob: dropout,
-                                  learningRateVar: learningRate})
+                                  })
         if i%25 == 0:
             train_accuracy, cross_entropyD, \
             h_conv1_meanD, h_conv2_meanD, h_conv3_meanD, h_conv4_meanD, h_conv5_meanD,\
@@ -174,7 +172,7 @@ with tf.device('/cpu:0'):
                         h_conv1_mean, h_conv2_mean, h_conv3_mean, h_conv4_mean, h_conv5_mean,
                         h_fc1_mean, W_fc2_mean,
                         y_conv],
-                        feed_dict={x: batch[0], y_: batch[1], keep_prob: 1, learningRateVar: 0.01})
+                        feed_dict={x: batch[0], y_: batch[1], keep_prob: 1})
             log("step: %d, training accuracy: %f, time: %d\n"%(i, train_accuracy, time.time() - stepStart))
             log("train cross entropy: %f\n"%(cross_entropyD))
             log("h_conv1 mean = %s\n"%(h_conv1_meanD))
@@ -186,6 +184,7 @@ with tf.device('/cpu:0'):
             # log("w_fc2 mean = %s\n"%(W_fc2_meanD))
             log("yP = %s\n"%(str(np.argmax(yD, axis=1))))
             log("yR = %s\n"%(str(np.argmax(batch[1], axis=1))))
+            log("x = %s\n"%(batch[2]))
             # log("validation accuracy: %g"%accuracy.eval(feed_dict={x:  validation[0], y_: validation[1], keep_prob: 1.0}))
 
         if i%500 == 0 and i != 0:
@@ -193,6 +192,6 @@ with tf.device('/cpu:0'):
         log('step: %d, time: %d\n' % (i, time.time() - stepStart))
 
     log("finale validation accuracy: %g"%accuracy.eval(feed_dict={
-        x:  validation[0], y_: validation[1], keep_prob: 1.0, learningRateVar:0.01}))
+        x:  validation[0], y_: validation[1], keep_prob: 1.0}))
 
 f1.close()
