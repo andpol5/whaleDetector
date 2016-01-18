@@ -36,27 +36,29 @@ def normalize(x):
     return tf.nn.local_response_normalization(x)
 
 # Constants
-learningRate = 1e-4
+# learningRate = 0.5e-2
 starter_learning_rate = 1e-5
-batchSize = 20
+batchSize = 10
 dropout = 1
+outputStep = 50
 
 nClasses = 38
 imW = 256
 imH = 256
 d1 = 32
-d2 = 64
-d3 = 128
-d4 = 256
-d5 = 512
-fc1 = 2048
-conv = 3
+d2 = 32
+d3 = 32
+d4 = 64
+d5 = 64
+fc1 = 1024
+fc2 = 1024
+conv = 5
 momentum = 0.9
 
 # Force CPU only mode
 with tf.device('/cpu:0'):
-    log('nClasses: %d, imageSize: %d, batchSize: %d, learningRate: %e, dropOut: %f, filtersize: %d\n'
-                    % (nClasses, imW, batchSize, learningRate, dropout, conv))
+    log('nClasses: %d, imageSize: %d, batchSize: %d, learningRate: %e, dropOut: %f, filtersize: %d, output each %d step\n'
+                    % (nClasses, imW, batchSize, starter_learning_rate, dropout, conv, outputStep))
 
     # create session
     sess = tf.InteractiveSession()
@@ -101,20 +103,27 @@ with tf.device('/cpu:0'):
     h_conv5 = activation(conv2d(normalize(h_pool4), W_conv5) + b_conv5)
     h_pool5 = max_pool_2x2(h_conv5) # size 8*8*d5
 
-    # Fully connected layer
+    # Fully connected layer 1
     W_fc1 = weight_variable([8 * 8 * d5, fc1])
     b_fc1 = bias_variable([fc1])
 
     h_pool5_flat = tf.reshape(normalize(h_pool5), [-1, 8*8*d5])
     h_fc1 = activation(tf.matmul(h_pool5_flat, W_fc1) + b_fc1)
-
-    # Output layer
     keep_prob = tf.placeholder("float")
     h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
-    W_fc2 = weight_variable([fc1, nClasses])
-    b_fc2 = bias_variable([nClasses])
 
-    y_conv=tf.nn.softmax(tf.matmul(h_fc1_drop, W_fc2) + b_fc2)
+    # Fully connected layer 2
+    W_fc2 = weight_variable([fc1, fc2])
+    b_fc2 = bias_variable([fc1])
+
+    h_fc2 = activation(tf.matmul(h_fc1_drop, W_fc2) + b_fc2)
+    h_fc2_drop = tf.nn.dropout(h_fc2, keep_prob)
+
+    # Output layer
+    W_fc3 = weight_variable([fc2, nClasses])
+    b_fc3 = bias_variable([nClasses])
+
+    y_conv=tf.nn.softmax(tf.matmul(h_fc2_drop, W_fc3) + b_fc3)
 
     # Cost function
     cross_entropy =  -tf.reduce_sum(y_ * tf.log(tf.clip_by_value(y_conv, 1e-15, 1.0)))
@@ -163,15 +172,15 @@ with tf.device('/cpu:0'):
         batch = datasets.train.get_sequential_batch(batchSize)
         train_step.run(feed_dict={x: batch[0], y_: batch[1], keep_prob: dropout,
                                   })
-        if i%25 == 0:
+        if i%50 == 0:
             train_accuracy, cross_entropyD, \
             h_conv1_meanD, h_conv2_meanD, h_conv3_meanD, h_conv4_meanD, h_conv5_meanD,\
             h_fc1_meanD, W_fc2_meanD,\
-            yD \
+            yD, currentLearningRate \
             = sess.run([accuracy, cross_entropy,
                         h_conv1_mean, h_conv2_mean, h_conv3_mean, h_conv4_mean, h_conv5_mean,
                         h_fc1_mean, W_fc2_mean,
-                        y_conv],
+                        y_conv, learning_rate],
                         feed_dict={x: batch[0], y_: batch[1], keep_prob: 1})
             log("step: %d, training accuracy: %f, time: %d\n"%(i, train_accuracy, time.time() - stepStart))
             log("train cross entropy: %f\n"%(cross_entropyD))
@@ -182,13 +191,14 @@ with tf.device('/cpu:0'):
             log("h_conv5 mean = %s\n"%(h_conv5_meanD))
             log("h_fc1 mean = %s\n"%(h_fc1_meanD))
             # log("w_fc2 mean = %s\n"%(W_fc2_meanD))
+            log(" learning rate = %.10f" % (currentLearningRate))
             log("yP = %s\n"%(str(np.argmax(yD, axis=1))))
             log("yR = %s\n"%(str(np.argmax(batch[1], axis=1))))
             log("x = %s\n"%(batch[2]))
             # log("validation accuracy: %g"%accuracy.eval(feed_dict={x:  validation[0], y_: validation[1], keep_prob: 1.0}))
 
         if i%500 == 0 and i != 0:
-            saver.save(sess, 'my-model-%d' % (time.time()), global_step=i)
+            saver.save(sess, 'my-model-%d' % (time.time()), global_step=global_step)
         log('step: %d, time: %d\n' % (i, time.time() - stepStart))
 
     log("finale validation accuracy: %g"%accuracy.eval(feed_dict={
