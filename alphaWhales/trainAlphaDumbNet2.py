@@ -37,10 +37,10 @@ def normalize(x):
 
 # Constants
 # learningRate = 0.5e-2
-starter_learning_rate = 1e-5
+starter_learning_rate = 1e-4
 batchSize = 10
 dropout = 1
-outputStep = 50
+outputStep = 10
 
 nClasses = 38
 imW = 256
@@ -51,7 +51,6 @@ d3 = 32
 d4 = 64
 d5 = 64
 fc1 = 1024
-fc2 = 1024
 conv = 5
 momentum = 0.9
 
@@ -110,20 +109,20 @@ with tf.device('/cpu:0'):
     h_pool5_flat = tf.reshape(normalize(h_pool5), [-1, 8*8*d5])
     h_fc1 = activation(tf.matmul(h_pool5_flat, W_fc1) + b_fc1)
     keep_prob = tf.placeholder("float")
-    h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
+    # h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
 
     # Fully connected layer 2
-    W_fc2 = weight_variable([fc1, fc2])
-    b_fc2 = bias_variable([fc1])
-
-    h_fc2 = activation(tf.matmul(h_fc1_drop, W_fc2) + b_fc2)
-    h_fc2_drop = tf.nn.dropout(h_fc2, keep_prob)
+    # W_fc2 = weight_variable([fc1, fc2])
+    # b_fc2 = bias_variable([fc1])
+    #
+    # h_fc2 = activation(tf.matmul(h_fc1, W_fc2) + b_fc2)
+    # h_fc2_drop = tf.nn.dropout(h_fc2, keep_prob)
 
     # Output layer
-    W_fc3 = weight_variable([fc2, nClasses])
+    W_fc3 = weight_variable([fc1, nClasses])
     b_fc3 = bias_variable([nClasses])
 
-    y_conv=tf.nn.softmax(tf.matmul(h_fc2_drop, W_fc3) + b_fc3)
+    y_conv=tf.nn.softmax(tf.matmul(h_fc1, W_fc3) + b_fc3)
 
     # Cost function
     cross_entropy =  -tf.reduce_sum(y_ * tf.log(tf.clip_by_value(y_conv, 1e-15, 1.0)))
@@ -150,7 +149,7 @@ with tf.device('/cpu:0'):
     # W_conv4_mean = tf.reduce_mean(tf.reduce_mean(tf.reduce_mean(tf.abs(W_conv4), 0), 0), 0)
     # W_conv5_mean = tf.reduce_mean(tf.reduce_mean(tf.reduce_mean(tf.abs(W_conv5), 0), 0), 0)
     # W_fc1_mean = tf.reduce_mean(tf.abs(W_fc1), 0)
-    W_fc2_mean = tf.reduce_mean(tf.abs(W_fc2), 0)
+    W_fc2_mean = tf.reduce_mean(tf.abs(W_fc3), 0)
 
     h_conv1_mean = tf.reduce_mean(tf.abs(h_conv1))
     h_conv2_mean = tf.reduce_mean(tf.abs(h_conv2))
@@ -172,7 +171,7 @@ with tf.device('/cpu:0'):
         batch = datasets.train.get_sequential_batch(batchSize)
         train_step.run(feed_dict={x: batch[0], y_: batch[1], keep_prob: dropout,
                                   })
-        if i%50 == 0:
+        if i%outputStep == 0:
             train_accuracy, cross_entropyD, \
             h_conv1_meanD, h_conv2_meanD, h_conv3_meanD, h_conv4_meanD, h_conv5_meanD,\
             h_fc1_meanD, W_fc2_meanD,\
