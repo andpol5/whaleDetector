@@ -36,9 +36,9 @@ def normalize(x):
     return tf.nn.local_response_normalization(x)
 
 # Constants
-starter_learning_rate = 1e-5
-batchSize = 30
-dropout = 1
+starter_learning_rate = 1e-4
+batchSize = 20
+# dropout = 0.8
 
 nClasses = 38
 imW = 256
@@ -74,6 +74,7 @@ with tf.device('/cpu:0'):
     # 3x3, 64
     # 3x3, 128
     # 3x3, 128
+    # pooling
     w_conv31 = weight_variable([3, 3, 64, 64])
     b_conv31 = bias_variable([64])
     h_conv31 = activation(conv2d(normalize(h_pool2), w_conv31) + b_conv31)
@@ -171,7 +172,7 @@ with tf.device('/cpu:0'):
     # W_conv4_mean = tf.reduce_mean(tf.reduce_mean(tf.reduce_mean(tf.abs(W_conv4), 0), 0), 0)
     # W_conv5_mean = tf.reduce_mean(tf.reduce_mean(tf.reduce_mean(tf.abs(W_conv5), 0), 0), 0)
     # W_fc1_mean = tf.reduce_mean(tf.abs(W_fc1), 0)
-    w_fc2_mean = tf.reduce_mean(tf.abs(w_fc2), 0)
+    w_fc2_mean = tf.reduce_mean(tf.abs(w_fc2))
 
     h_conv1_mean = tf.reduce_mean(tf.abs(h_conv1))
     h_conv2_mean = tf.reduce_mean(tf.abs(h_conv2))
@@ -187,15 +188,15 @@ with tf.device('/cpu:0'):
     saver = tf.train.Saver()
 
     # Restore previous model here if applicable
-    # previous_model_name = 'my-model-1453028131-8001'
-    # saver.restore(sess, previous_model_name)
+    previous_model_name = 'deep_sense-model-15-percent'
+    saver.restore(sess, previous_model_name)
 
     for i in range(20000):
         stepStart = time.time()
 
         batch = datasets.train.get_sequential_batch(batchSize)
-        train_step.run(feed_dict={x: batch[0], y_: batch[1], keep_prob: dropout})
-        if i%50 == 0:
+        train_step.run(feed_dict={x: batch[0], y_: batch[1], keep_prob: 1.0})
+        if i%25 == 0:
             train_accuracy, cross_entropyD, \
             h_conv1_meanD, h_conv2_meanD, h_conv3_meanD, h_conv4_meanD, h_conv5_meanD,\
             h_fc1_meanD, W_fc2_meanD,\
@@ -203,7 +204,7 @@ with tf.device('/cpu:0'):
             = sess.run([accuracy, cross_entropy,
                         h_conv1_mean, h_conv2_mean, h_conv3_mean, h_conv4_mean, h_conv5_mean,
                         h_fc1_mean, w_fc2_mean, y_conv, learning_rate],
-                        feed_dict={x: batch[0], y_: batch[1], keep_prob: 1})
+                        feed_dict={x: batch[0], y_: batch[1], keep_prob: 1.0})
             log("step: %d, training accuracy: %f, time: %d"%(i, train_accuracy, time.time() - stepStart))
             log("train cross entropy: %f"%(cross_entropyD))
             log("h_conv1 mean = %s"%(h_conv1_meanD))
@@ -216,7 +217,7 @@ with tf.device('/cpu:0'):
             log(" learning rate = %f" % (currentLearningRate));
             log("y     = %s"%(str(np.argmax(yD, axis=1))))
             log("yReal = %s"%(str(np.argmax(batch[1], axis=1))))
-            # log("validation accuracy: %g"%accuracy.eval(feed_dict={x:  validation[0], y_: validation[1], keep_prob: 1.0}))
+            log("validation accuracy: %g"%accuracy.eval(feed_dict={x:  validation[0], y_: validation[1], keep_prob: 1.0}))
 
         if i%500 == 0 and i != 0:
             saver.save(sess, 'deep_sense-model-%d' % (time.time()), global_step=global_step)
