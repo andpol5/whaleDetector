@@ -32,13 +32,14 @@ class Utility:
 
 
    def saliencyMap(self, var):
-      imName = 'train/train/w_3.jpg'
+      whale = 'w_6527'
+      imName = 'train/train/%s.jpg' % whale
       im = self.datasets.train.read_images([imName])
       yTrain = np.zeros((1, self.nClasses))
       yTrain[0][0] = 1
       cl = 13
-      k = 128
-      size = 2
+      k = 32
+      size = 8
       res = np.zeros((k,k))
 
       y_conv = self.sess.run([var], feed_dict = {self.x:np.array(im), self.y_: yTrain, self.keep_prob: 1})
@@ -57,9 +58,26 @@ class Utility:
          y_conv = np.array(y_conv).reshape((k,38))
          diff = baseline - y_conv[:, cl]
          res[i, :] = diff
+         print(i)
 
       res = ((res - np.min(res))/(np.max(res)-np.min(res))) * 255
-      cv2.imwrite('salience_map.jpg', res)
+      cv2.imwrite('saliencyMap/%s/salience_map.jpg' % whale, res)
+
+      im = cv2.imread(imName)
+
+      salImNew = np.zeros((im.shape[0], im.shape[1]))
+
+      for i in xrange(salImNew.shape[0]/size):
+          for j in xrange(salImNew.shape[1]/size):
+              salImNew[i*size:(i+1)*size, j*size:(j+1)*size] = np.ones((size, size))*res[i,j]
+
+      imMerged = cv2.applyColorMap(np.uint8(salImNew), cv2.COLORMAP_JET)
+
+      imMerged = self.normalize(im+(imMerged))
+      cv2.imwrite('saliencyMap/%s/merged.jpg'%whale, imMerged)
+
+   def normalize(self, x):
+      return (x-np.min(x))/(np.max(x)-np.min(x))*255
 
 
 
