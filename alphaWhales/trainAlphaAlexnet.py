@@ -4,7 +4,13 @@ import tensorflow as tf
 import time
 import dataset
 
+np.set_printoptions(threshold=np.nan)
+f1 = open('log_alexnet_%d' % (time.time()), 'w+')
 
+def log(str):
+    f1.write(str)
+    f1.flush()
+    print(str)
 
 # Tensorflow convinience functions
 def weight_variable(shape, name):
@@ -20,6 +26,12 @@ def conv2d(x, W):
 
 def max_pool_3x3(x, name):
    return tf.nn.max_pool(x, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='VALID', name=name)
+
+def activation(x):
+    return tf.nn.relu(x)
+
+def normalize(x):
+    return tf.nn.local_response_normalization(x)
 
 
 start_time = time.time()
@@ -63,11 +75,11 @@ def doAlexNet(trainDir, valDir, trainCsv, valCsv):
       # Constants
       nClasses = 38
       imageSize = 227
-      learningRate = 1e-6
+      starter_learning_rate = 1e-5
       batchSize = 10
-      dropOutValue = 0.5
-      f1.write('nClasses: %d, imageSize: %d, batchSize: %d, learningRate: %e, dropOut: %f\n'
-                    % (nClasses, imageSize, batchSize, learningRate, dropOutValue))
+      dropOutValue = 1
+      log('nClasses: %d, imageSize: %d, batchSize: %d, learningRate: %e, dropOut: %f\n'
+                    % (nClasses, imageSize, batchSize, starter_learning_rate, dropOutValue))
 
       # The size of the images is 227x227
       x = tf.placeholder("float", shape=[None, imageSize, imageSize, 1], name="Input")
@@ -81,14 +93,14 @@ def doAlexNet(trainDir, valDir, trainCsv, valCsv):
 
       # We then convolve x_image with the weight tensor,
       # add the bias, apply the ReLU function (repeat from step 1) and finally max pool.
-      h_conv1 = tf.nn.relu(tf.nn.conv2d(x, w_conv1, strides=[1, 4, 4, 1], padding='VALID') + b_conv1)
+      h_conv1 = activation(tf.nn.conv2d(x, w_conv1, strides=[1, 4, 4, 1], padding='VALID') + b_conv1)
       h_pool1 = max_pool_3x3(h_conv1, name="pool1")
 
       # SECOND SUBLAYER (256 features, 1 convolution)
       w_conv2 = weight_variable([5, 5, 96, 256], name="Weights_conv2")
       b_conv2 = bias_variable([256], name="b_conv2")
 
-      h_conv2 = tf.nn.relu(conv2d(h_pool1, w_conv2)  + b_conv2)
+      h_conv2 = tf.nn.relu(conv2d(normalize(h_pool1), w_conv2)  + b_conv2)
       h_pool2 = max_pool_3x3(h_conv2, name="pool2")
 
       # THIRD SUBLAYER (384 features, 3 convolutions)
@@ -99,9 +111,9 @@ def doAlexNet(trainDir, valDir, trainCsv, valCsv):
       w_conv33 = weight_variable([3, 3, 384, 256], name="Weights_conv33")
       b_conv33 = bias_variable([256], name="b_conv33")
 
-      h_conv31 = tf.nn.relu(conv2d(h_pool2, w_conv31)  + b_conv31)
-      h_conv32 = tf.nn.relu(conv2d(h_conv31, w_conv32) + b_conv32)
-      h_conv33 = tf.nn.relu(conv2d(h_conv32, w_conv33) + b_conv33)
+      h_conv31 = activation(conv2d(normalize(h_pool2), w_conv31)  + b_conv31)
+      h_conv32 = activation(conv2d(normalize(h_conv31), w_conv32) + b_conv32)
+      h_conv33 = activation(conv2d(normalize(h_conv32), w_conv33) + b_conv33)
       h_pool3 = max_pool_3x3(h_conv33, name="pool3")
 
       # DENSELY CONNECTED LAYER
@@ -120,7 +132,7 @@ def doAlexNet(trainDir, valDir, trainCsv, valCsv):
       b_fc1 = bias_variable([4096], name="biases_fc1")
 
       h_pool3_flat = tf.reshape(h_pool3, [-1, 6*6*256])
-      h_fc1 = tf.nn.relu(tf.matmul(h_pool3_flat, w_fc1) + b_fc1)
+      h_fc1 = activation(tf.matmul(h_pool3_flat, w_fc1) + b_fc1)
       # Dropout of fc1 (dropout keep probability of 0.5)
       keep_prob = tf.placeholder("float")
       h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
@@ -128,7 +140,7 @@ def doAlexNet(trainDir, valDir, trainCsv, valCsv):
       # Fully connected layer 2
       w_fc2 = weight_variable([4096, 4096], name="Weights_fc2")
       b_fc2 = bias_variable([4096], name="biases_fc2")
-      h_fc2 = tf.nn.relu(tf.matmul(h_fc1_drop, w_fc2) + b_fc2)
+      h_fc2 = activation(tf.matmul(h_fc1_drop, w_fc2) + b_fc2)
       h_fc2_drop = tf.nn.dropout(h_fc2, keep_prob)
 
       # Readout layer
@@ -141,16 +153,19 @@ def doAlexNet(trainDir, valDir, trainCsv, valCsv):
 
       # Train and eval the model
       cross_entropy = -tf.reduce_sum(y_*tf.log(tf.clip_by_value(y_conv,1e-10,1.0)))
-      # tf.scalar_summary('cross entropy', cross_entropy)
 
-      # train_step = tf.train.GradientDescentOptimizer(0.00001).minimize(cross_entropy)
-      train_step = tf.train.AdamOptimizer(learningRate).minimize(cross_entropy)
+      # Exponentially decaying learning rate
+      global_step = tf.Variable(0, trainable=False)
+      learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step, 100, 0.98, staircase=True)
+      # Passing global_step to minimize() will increment it at each step.
+
+      # Optimizer
+      train_step = tf.train.AdamOptimizer(learning_rate).minimize(cross_entropy, global_step=global_step)
+
       correct_prediction = tf.equal(tf.argmax(y_conv,1), tf.argmax(y_,1))
       accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
       sess.run(tf.initialize_all_variables())
 
-      # summary_op = tf.merge_all_summaries()
-      # summary_writer = tf.train.SummaryWriter('/tmp/whales', graph_def=sess.graph_def)
       saver = tf.train.Saver()
 
       # saver.restore(sess, 'my-model-batch1-10000')
@@ -162,35 +177,23 @@ def doAlexNet(trainDir, valDir, trainCsv, valCsv):
 
          train_step.run(feed_dict={x: batch[0], y_: batch[1], keep_prob:dropOutValue}, session=sess)
 
-         if i%25 == 0 and i != 0:
-            #evaluate accuracy on all training set
-            batch = datasets.train.get_random_batch(100)
+         if i%25 == 0:
+            train_accuracy, cross_entropyD,\
+            yD, currentLearningRate \
+            = sess.run([accuracy, cross_entropy, y_conv, learning_rate],
+                        feed_dict={x: batch[0], y_: batch[1], keep_prob: 1})
+            log("step: %d, training accuracy: %f, time: %d"%(i, train_accuracy, time.time() - step_start))
+            log("train cross entropy: %f"%(cross_entropyD))
+            log("learning rate = %.10f" % (currentLearningRate));
+            log("y     = %s"%(str(np.argmax(yD, axis=1))))
+            log("yReal = %s"%(str(np.argmax(batch[1], axis=1))))
+            # log("validation accuracy: %g"%accuracy.eval(feed_dict={x:  validation[0], y_: validation[1], keep_prob: 1.0}))
 
-            f1.write("step %d finished, time = %s\n" %(i, time.time() - step_start))
-            acc, cross_entropyD = sess.run([accuracy, cross_entropy],
-                                                      feed_dict={x: batch[0], y_: batch[1], keep_prob: 1})
-            f1.write("Cross entropy = " + str(cross_entropyD) + "\n")
-            f1.write("Accuracy = " + str(acc) + "\n")
-            f1.write("\n--- %s seconds ---\n\n" % (time.time() - start_time))
-            f1.flush()
-            # summary_writer.add_summary(summary_str, i)
+         if i%200 == 0 and i != 0:
+            saver.save(sess, 'alexnet-model-%d' % (time.time()), global_step=global_step)
 
-         f1.write("\nstep %d finished, %d seconds \n" % (i, time.time() - step_start))
-         f1.flush()
+         log('step: %d, time: %d\n' % (i, time.time() - step_start))
 
 
-      saver.save(sess, 'my-model-%d'%(start_time), global_step=10000)
-      # Evaluate the prediction
-      test = datasets.validation.getAll()
 
-      acc, y_convD, correct_predictionD = sess.run([accuracy, y_conv, correct_prediction],
-                                                   feed_dict={x: test[0], y_: test[1], keep_prob: 1.0})
-      f1.write("Accuracy = " + str(acc) + "\n")
-      f1.write("Correct prediction %d\n" % (sum(correct_predictionD)))
-      f1.write("y %s\n" % str(test[1]))
-      f1.write("y from net %s\n" % str(np.argmax(y_convD, axis=1)))
-      f1.write("\n--- %s seconds ---\n\n" % (time.time() - start_time))
-      f1.flush()
-      f1.close()
-
-doAlexNet('train/train', 'train/validation', 'whales.csv', 'whales.csv')
+doAlexNet('train2/train', 'train2/validation', 'train2/train/train.csv', 'whales.csv')
