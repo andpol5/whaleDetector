@@ -1,1 +1,0 @@
-Dropout paper - note similariy between sexual reproduction and droput in neural nets\n
