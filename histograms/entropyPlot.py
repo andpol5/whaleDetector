@@ -1,10 +1,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import sys
 
-files = ['../alphaWhales/log_1452990918', '../alphaWhales/log_1453029699']
+prefix = '../alphaWhales/'
+files = sys.argv[1:]
 entropies = []
 for file in files:
-   f = open(file, 'r')
+   f = open(prefix + file, 'r')
    for line in f:
       if (line.startswith("train cross entropy: ")):
          entropy = float(line.split('train cross entropy: ')[1][:-1])
@@ -13,7 +15,7 @@ for file in files:
 logs = np.log10(np.array(entropies))
 plt.plot(logs)
 x,p = plt.xticks()
-xticks = [str(t*50) for t in x]
+xticks = [str(t*25) for t in x]
 plt.xticks(x, xticks)
 
 y,p = plt.yticks()
